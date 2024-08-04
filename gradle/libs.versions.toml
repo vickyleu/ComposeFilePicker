@@ -1,6 +1,23 @@
 [versions]
-agp = "8.4.0-alpha07"
-kotlin = "1.9.22"
+agp = "8.5.1"
+android-minSdk = "24"
+android-compileSdk = "34"
+android-targetSdk = "34"
+
+kotlin = "2.0.0"
+#compose-plugin = "1.6.11"
+compose-plugin = "1.7.0-alpha02"
+
+jetpack-compose-bom = "2024.06.00"
+coroutines-bom = "1.8.1"
+coil-bom = "3.0.0-alpha06"
+jvmTarget = "17"
+
+dokka = "1.9.20"
+kotlinxDatetime = "0.6.0"
+compose-voyager = "1.1.0-beta01"
+navigationCompose = "2.8.0-alpha02"
+
 coreKtx = "1.12.0"
 junit = "4.13.2"
 junitVersion = "1.1.5"
@@ -9,11 +26,28 @@ lifecycleRuntimeKtx = "2.7.0"
 activityCompose = "1.8.2"
 composeBom = "2024.01.00"
 appcompat = "1.6.1"
-navigationCompose = "2.7.6"
+
 accompanist = "0.34.0"
 documentfile = "1.0.1"
 
 [libraries]
+navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "jetpack-compose-bom" }
+coroutines-bom = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-bom", version.ref = "coroutines-bom" }
+coil-bom = { module = "io.coil-kt.coil3:coil-bom", version.ref = "coil-bom" }
+
+voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "compose-voyager" }
+voyager-screenmodel = { module = "cafe.adriel.voyager:voyager-screenmodel", version.ref = "compose-voyager" }
+voyager-navigator-tab = { module = "cafe.adriel.voyager:voyager-tab-navigator", version.ref = "compose-voyager" }
+voyager-transitions = { module = "cafe.adriel.voyager:voyager-transitions", version.ref = "compose-voyager" }
+voyager-navigator-bottomsheet = { module = "cafe.adriel.voyager:voyager-bottom-sheet-navigator", version.ref = "compose-voyager" }
+coil-core = { module = "io.coil-kt.coil3:coil"}
+coil-compose = { module = "io.coil-kt.coil3:coil-compose"}
+coil-video = { module = "io.coil-kt.coil3:coil-video"}
+coil-gif = { module = "io.coil-kt.coil3:coil-gif"}
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+
+
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
@@ -33,7 +67,13 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+
+
 [plugins]
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "agp" }
-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }

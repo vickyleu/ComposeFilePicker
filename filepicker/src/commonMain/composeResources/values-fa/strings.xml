@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="back_to_previous_dir">بازگشت به پوشه قبلی</string>
+    <string name="folder">پوشه</string>
+    <string name="file">فایل</string>
+    <string name="item_desc">%1$s موارد</string>
+    <string name="search">جستجو</string>
+    <string name="more_options">گزینه‌های بیشتر</string>
+    <string name="sort_by">مرتب‌سازی بر اساس</string>
+    <string name="by_name">بر اساس نام</string>
+    <string name="by_size">بر اساس اندازه</string>
+    <string name="by_date">بر اساس تاریخ</string>
+    <string name="by_type">بر اساس نوع</string>
+    <string name="reverse_sorting">مرتب‌سازی معکوس</string>
+    <string name="cancel_select">لغو انتخاب</string>
+    <string name="select">انتخاب</string>
+    <string name="list">لیست</string>
+    <string name="grid">شبکه</string>
+    <string name="new_folder">پوشه جدید</string>
+    <string name="cancel_search">لغو جستجو</string>
+    <string name="refresh">بازنویسی</string>
+    <string name="search_type">نوع جستجو</string>
+    <string name="all">همه</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="error_permission_denied">دسترسی رد شد: %1$s</string>
+</resources>
