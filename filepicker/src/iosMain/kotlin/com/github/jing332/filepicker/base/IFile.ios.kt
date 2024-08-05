@@ -334,6 +334,6 @@ actual class ByteArrayOutputStreamImpl actual constructor() : OutputStreamImpl()
         }
     }
 
-    override fun write(b: Int) {
+    actual override fun write(b: Int) {
     }
 }

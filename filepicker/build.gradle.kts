@@ -54,7 +54,7 @@ kotlin {
             implementation(project.dependencies.platform(libs.compose.bom))
             implementation(project.dependencies.platform(libs.coroutines.bom))
             implementation(project.dependencies.platform(libs.coil.bom))
-//
+//            implementation(libs.kmm.navigation.compose)
             implementation(libs.coil.core)
             api(libs.coil.compose)
 
@@ -63,7 +63,7 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.accompanist.permissions)
-            implementation(libs.navigation.compose)
+            implementation(libs.androidx.navigation.compose)
 //            implementation(libs.androidx.documentfile)
         }
 

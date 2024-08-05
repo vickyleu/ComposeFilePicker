@@ -18,4 +18,13 @@ abstract class IFileModel {
     open fun inputStream(): InputStreamImpl = throw NotImplementedError()
     open fun outputStream(): OutputStreamImpl = throw NotImplementedError()
     open fun files(): List<IFileModel> = emptyList()
+    open fun fileCountWithFilter(fileFilter: com.github.jing332.filepicker.FileFilter):Int{
+        var fileCount = 0
+        files().forEach {
+            if (fileFilter.accept(it)) {
+                fileCount++
+            }
+        }
+        return fileCount
+    }
 }

@@ -7,11 +7,24 @@ import androidx.core.net.toUri
 import androidx.navigation.NavController
 import androidx.navigation.NavDeepLinkRequest
 import androidx.navigation.NavDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
 
+//@Suppress("RestrictedApi")
+//fun NavController.navigateImpl(
+//    route: String,
+//    argsBuilder: Map<String, Any>.() -> Unit = {},
+//    navOptions: NavOptions? = null,
+//    navigatorExtras: Navigator.Extras? = null
+//) {
+//    val map = mapOf<String,Any>()
+//    argsBuilder.invoke(map)
+//    navigateImpl(route, args = map, navOptions, navigatorExtras)
+//}
+
 @Suppress("RestrictedApi")
-actual fun NavController.navigate(
+fun NavHostController.navigateImpl(
     route: String,
     args: Map<String, Any>,
     navOptions: NavOptions?,

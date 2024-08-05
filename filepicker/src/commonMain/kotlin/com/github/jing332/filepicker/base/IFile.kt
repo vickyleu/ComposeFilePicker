@@ -15,6 +15,7 @@ expect abstract class InputStreamImpl {
 
 expect class ByteArrayOutputStreamImpl(): OutputStreamImpl {
     fun toByteArray(): ByteArray
+    override fun write(b: Int)
 }
 
 

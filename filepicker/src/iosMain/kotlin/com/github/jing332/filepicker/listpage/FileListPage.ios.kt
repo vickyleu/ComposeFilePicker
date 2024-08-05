@@ -5,7 +5,7 @@ import androidx.compose.runtime.remember
 import platform.UIKit.UIImpactFeedbackGenerator
 import platform.UIKit.UIImpactFeedbackStyle
 
-actual class HapticFeedbackHandler {
+ class HapticFeedbackHandler {
     //  iOS 中触感反馈
     private val feedbackGenerator =
         UIImpactFeedbackGenerator(UIImpactFeedbackStyle.UIImpactFeedbackStyleLight)
@@ -14,12 +14,12 @@ actual class HapticFeedbackHandler {
         feedbackGenerator.prepare()
     }
 
-    actual fun performHaptic() {
+     fun performHaptic() {
         feedbackGenerator.impactOccurred()
     }
 }
 
 @Composable
-actual fun getHapticFeedbackHandler(): HapticFeedbackHandler {
+ fun getHapticFeedbackHandler(): HapticFeedbackHandler {
     return remember { HapticFeedbackHandler() }
 }

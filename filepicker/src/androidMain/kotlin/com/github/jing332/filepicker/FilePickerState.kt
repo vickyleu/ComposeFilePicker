@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.github.jing332.filepicker.listpage.FileListPageState
-import com.github.jing332.filepicker.utils.navigate
+import com.github.jing332.filepicker.utils.navigateImpl
 
 @Composable
 fun rememberFilePickerState(
@@ -53,7 +53,7 @@ class FilePickerState(
 
     fun navigate(path: String, state: FileListPageState = FileListPageState()) {
         fileListStates[path] = state
-        navController.navigate(Contants.ROUTE_PAGE, mapOf(Contants.ARG_PATH to path))
+        navController.navigateImpl(Contants.ROUTE_PAGE, mapOf(Contants.ARG_PATH to path), navigatorExtras = null, navOptions = null)
     }
 
     // 回到首页

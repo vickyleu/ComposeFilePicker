@@ -23,7 +23,6 @@ import com.github.jing332.filepicker.model.BackFileModel
 import com.github.jing332.filepicker.model.IFileModel
 import com.github.jing332.filepicker.utils.StringUtils.sizeToReadable
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -123,7 +122,11 @@ class FileListPageState(
 
         launch(Dispatchers.Main) {
             for (item in items) {
-                item.fileCount.intValue = withContext(Dispatchers.IO) { item.model.fileCount }
+                item.fileCount.intValue = withContext(Dispatchers.IO) {
+                    //config!!.fileFilter
+//                    item.model.fileCount
+                    item.model.fileCountWithFilter(config!!.fileFilter)
+                }
                 item.fileSize.value =
                     withContext(Dispatchers.IO) { item.model.size.sizeToReadable() }
                 item.fileLastModified.value = withContext(Dispatchers.IO) {

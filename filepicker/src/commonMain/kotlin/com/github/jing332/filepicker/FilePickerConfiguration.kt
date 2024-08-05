@@ -7,6 +7,17 @@ import androidx.compose.runtime.setValue
 import com.github.jing332.filepicker.filetype.FileDetector
 import com.github.jing332.filepicker.model.IFileModel
 
+object SortType {
+    const val NAME = 0
+    const val SIZE = 1
+    const val DATE = 2
+    const val TYPE = 3
+}
+
+data class SortConfig(
+    val sortBy: Int = SortType.NAME,
+    val reverse: Boolean = false
+)
 
 object ViewType {
     const val LIST = 0

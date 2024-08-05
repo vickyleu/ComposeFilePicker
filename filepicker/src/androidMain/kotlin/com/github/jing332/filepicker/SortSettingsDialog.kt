@@ -33,18 +33,6 @@ import compose_filepicker.filepicker.generated.resources.reverse_sorting
 import compose_filepicker.filepicker.generated.resources.sort_by
 import org.jetbrains.compose.resources.stringResource
 
-object SortType {
-    const val NAME = 0
-    const val SIZE = 1
-    const val DATE = 2
-    const val TYPE = 3
-}
-
-data class SortConfig(
-    val sortBy: Int = SortType.NAME,
-    val reverse: Boolean = false
-)
-
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

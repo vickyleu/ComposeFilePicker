@@ -109,18 +109,23 @@ allprojects {
         }
     }
     val jvmTarget = map["jvmTarget"] ?: "11"
+    val repo = rootDir.name
     val rootProjectName = rootProject.name.lowercase()
+        .replace("compose-", "")
+        .replace("compose_", "")
         .replace("compose", "")
 
     val mavenAuthor = "vickyleu"
     val mavenGroup = "com.$mavenAuthor.$rootProjectName"
     val mVersion = "1.0.2"
     if (project.subprojects.isNotEmpty()) return@allprojects
-    val currentName = project.name.replace("$rootProjectName-", "")
+    val currentName = project.name
+        .replace("$rootProjectName-", "")
+        .replace("${rootProjectName}_", "")
     if (rootProject.name == currentName) {
         return@allprojects
     }
-    if (project.name.contains("sample") || project.parent?.name?.contains("sample") == true) {
+    if (project.name.contains("composeApp") || project.name.contains("sample") || project.parent?.name?.contains("sample") == true) {
         return@allprojects
     }
     println("currentName: ${project.parent?.name} - ${project.name}")
@@ -160,7 +165,7 @@ allprojects {
             archiveClassifier = "javadoc"
         }
         publishing {
-            val projectName = rootProjectName
+            val projectName = repo
             repositories {
                 maven {
                     name = "GitHubPackages"
@@ -173,32 +178,14 @@ allprojects {
             }
             afterEvaluate {
                 publications.withType<MavenPublication> {
-
-//                    if(artifactId.endsWith("-android")){
-//                        println("有毛病啊::${artifactId}")
-//                        from(components["release"])
-//                    }else{
-//
-//                    }
                     artifact(javadocJar)
-
-                    /*when {
-                        project.extensions.findByName("javaPlatform") != null && components["javaPlatform"] != null -> {
-                            from(components["javaPlatform"])
-                        }
-                        project.extensions.findByName("android") != null
-                            && artifactId.endsWith("-android")
-                            && components["release"] != null -> {
-                            from(components["release"])
-                        }
-                        else -> artifact(javadocJar) // Required a workaround. See below
-                    }*/
                     version = mVersion
                     groupId = mGroup
                     if (artifactId.startsWith("${rootProjectName}-${currentName}")) {
                         artifactId =
                             artifactId.replace("${rootProjectName}-${currentName}", currentName)
                     }
+                    artifactId=artifactId.lowercase()
                     println("artifactId: $artifactId \"${rootProjectName}-${currentName}\"")
                     pom {
                         url = "https://github.com/$mavenAuthor/${projectName}"
@@ -248,14 +235,6 @@ allprojects {
             // outputDirectory = layout.buildDirectory.get().resolve("dokka")
             offlineMode = false
             moduleName = currentName
-            // See the buildscript block above and also
-            // https://github.com/Kotlin/dokka/issues/2406
-//    pluginConfiguration<DokkaBase, DokkaBaseConfiguration> {
-////        customAssets = listOf(file("../asset/logo-icon.svg"))
-////        customStyleSheets = listOf(file("../asset/logo-styles.css"))
-//        separateInheritedMembers = true
-//    }
-
             dokkaSourceSets {
                 configureEach {
                     reportUndocumented = true
@@ -263,14 +242,6 @@ allprojects {
                     noStdlibLink = false
                     noJdkLink = false
                     jdkVersion = jvmTarget.toInt()
-                    // sourceLink {
-                    //     // Unix based directory relative path to the root of the project (where you execute gradle respectively).
-                    //     // localDirectory.set(file("src/main/kotlin"))
-                    //     // URL showing where the source code can be accessed through the web browser
-                    //     // remoteUrl = uri("https://github.com/mahozad/${project.name}/blob/main/${project.name}/src/main/kotlin").toURL()
-                    //     // Suffix which is used to append the line number to the URL. Use #L for GitHub
-                    //     remoteLineSuffix = "#L"
-                    // }
                 }
             }
         }
@@ -301,6 +272,8 @@ tasks.register("deletePackages") {
     }
 
     val rootProjectName = rootDir.name.lowercase()
+        .replace("compose_", "")
+        .replace("compose-", "")
         .replace("compose", "")
 
     val mavenAuthor = "vickyleu"

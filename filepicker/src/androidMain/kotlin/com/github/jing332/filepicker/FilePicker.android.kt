@@ -130,11 +130,6 @@ fun FilePicker(
                 }
 
                 val file = FileImpl(path)
-                println(
-                    "onEnterDirectory path::${path}  ${
-                        entry.arguments?.keySet()?.map { "key=${it}" }?.joinToString()
-                    }"
-                )
                 FileListPage(
                     modifier = Modifier
                         .fillMaxSize(),
@@ -156,39 +151,7 @@ fun FilePicker(
 
             }
         }
-
-        /*AnimatedVisibility(visible = saveMode) {
-            Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                DenseTextField(
-                    modifier = Modifier.weight(1f),
-                    value = state.saveFilename,
-                    onValueChange = {
-                        state.saveFilename = it
-                    },
-                    leadingIcon = {
-                        val detect =
-                            config.fileDetector.detect(NormalFile(FileImpl(state.currentPath + "/" + state.saveFilename)))
-                        if (detect == null)
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, null)
-                        else
-                            detect.IconContent()
-                    }
-                )
-
-                FilledTonalButton(
-                    modifier = modifier.padding(start = 8.dp), onClick = {
-                        onSaveFile?.invoke(
-                            state.currentListState?.file!!,
-                            state.saveFilename
-                        )
-                    }) {
-                    Text(stringResource(Res.string.ok))
-                }
-            }
-        }
-*/
     }
-
 }
 
 @Composable
@@ -200,7 +163,24 @@ actual fun startPickerHandler(
     FilePicker(
         state = rememberFilePickerState(),
         config = FilePickerConfiguration(
-            fileFilter = { true },
+            fileFilter = {
+                if (it.name.startsWith(".") ||
+                    (it.isDirectory.not() && it.name.contains(".").not())
+                ) {
+                    false
+                } else {
+                    if (it.isDirectory.not() && it.name.contains(".")) {
+                        it.name.split(".").lastOrNull()?.let {
+                            val isImage = (it in listOf("jpg", "jpeg",
+                                "png", "gif", "bmp", "webp","thumbnail"))
+                            if (isImage) {
+                                return@FilePickerConfiguration false
+                            }
+                        }
+                    }
+                    true
+                }
+            },
             fileSelector = { checkedList, check ->
                 val pass = !check.isDirectory
                 if (pass) {

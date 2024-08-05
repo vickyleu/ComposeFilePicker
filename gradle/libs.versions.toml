@@ -16,6 +16,7 @@ jvmTarget = "17"
 dokka = "1.9.20"
 kotlinxDatetime = "0.6.0"
 navigationCompose = "2.7.6"
+kmm-navigationCompose = "2.8.0-alpha02"
 
 coreKtx = "1.12.0"
 junit = "4.13.2"
@@ -30,7 +31,8 @@ accompanist = "0.34.0"
 documentfile = "1.0.1"
 
 [libraries]
-navigation-compose  = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-navigation-compose  = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+kmm-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "kmm-navigationCompose" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "jetpack-compose-bom" }
 coroutines-bom = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-bom", version.ref = "coroutines-bom" }
 coil-bom = { module = "io.coil-kt.coil3:coil-bom", version.ref = "coil-bom" }
