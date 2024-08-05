@@ -6,18 +6,22 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key.Companion.R
 import com.github.jing332.filepicker.FilePickerConfiguration
 import com.github.jing332.filepicker.ViewType
 import com.github.jing332.filepicker.model.IFileModel
-import com.github.jing332.filepicker.utils.performLongPress
 import compose_filepicker.filepicker.generated.resources.Res
+import compose_filepicker.filepicker.generated.resources.back_to_previous_dir
+import compose_filepicker.filepicker.generated.resources.file
+import compose_filepicker.filepicker.generated.resources.folder
+import compose_filepicker.filepicker.generated.resources.item_desc
 import org.jetbrains.compose.resources.stringResource
 
 
@@ -33,7 +37,9 @@ fun FileListPage(
 ) {
     val hasChecked by rememberUpdatedState(newValue = state.hasChecked())
 
-    val view = LocalView.current
+
+    val handler = getHapticFeedbackHandler()
+
 
     LaunchedEffect(key1 = file) {
         if (state.items.isEmpty()) {
@@ -44,7 +50,7 @@ fun FileListPage(
     }
 
     LaunchedEffect(key1 = hasChecked) {
-        if (hasChecked) view.performLongPress()
+        if (hasChecked) handler.performHaptic()
     }
 
     @Composable
@@ -56,14 +62,14 @@ fun FileListPage(
             icon = {
                 if (item.isDirectory) {
                     Icon(
-                        imageVector = Icons.Filled.Folder,
+                        imageVector = Icons.Filled.Favorite,
                         contentDescription = stringResource(Res.string.folder)
                     )
                 } else {
                     val fileType = config.fileDetector.detect(item.model)
                     if (fileType == null)
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
+                            imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = stringResource(Res.string.file)
                         )
                     else
@@ -119,3 +125,9 @@ fun FileListPage(
         }
 }
 
+@Composable
+expect fun getHapticFeedbackHandler(): HapticFeedbackHandler
+
+expect class HapticFeedbackHandler {
+    fun performHaptic()
+}

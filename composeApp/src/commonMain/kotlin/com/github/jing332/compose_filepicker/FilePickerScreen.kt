@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.LocalPlatformContext
 import com.github.jing332.filepicker.FilePicker
 import com.github.jing332.filepicker.FilePickerConfiguration
+import com.github.jing332.filepicker.base.useImpl
 import com.github.jing332.filepicker.model.IFileModel
 import com.github.jing332.filepicker.rememberFilePickerState
 import com.github.jing332.filepicker.showToast
@@ -35,6 +36,7 @@ fun FilePickerScreen(
     onlyShowDir: Boolean,
     selectMode: Int,
     singleSelect: Boolean,
+    onSelectFile: (IFileModel) -> Unit
 ) {
     val context = LocalPlatformContext.current
     var showSelectedList by remember { mutableStateOf<List<IFileModel>?>(null) }
@@ -53,7 +55,7 @@ fun FilePickerScreen(
     }
 
     fun saveFileCallback(file: IFileModel, name: String): Boolean {
-        file.createFile(name).outputStream().use {
+        file.createFile(name).outputStream().useImpl {
             it.write("Hello, World!".commonAsUtf8ToByteArray())
         }
         showToast(context, "Save successful.")
@@ -90,7 +92,8 @@ fun FilePickerScreen(
             onConfirmSelect = {
                 showSelectedList = it
             },
-            onSaveFile = if (filename != null) ::saveFileCallback else null
+            onSaveFile = if (filename != null) ::saveFileCallback else null,
+            onSelectFile=onSelectFile
         )
     }
 }

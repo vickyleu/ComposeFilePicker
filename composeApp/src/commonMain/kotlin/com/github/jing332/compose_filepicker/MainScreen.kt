@@ -29,85 +29,28 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.github.jing332.compose_filepicker.ui.theme.ComposefilepickerTheme
+import com.github.jing332.filepicker.base.useImpl
 
 @Composable
 fun ComposeApp(){
     ComposefilepickerTheme {
-        var saveFileMode by remember { mutableStateOf(false) }
-        var filename by remember { mutableStateOf("test.txt") }
         var isOnlyDir by remember { mutableStateOf(false) }
         var isSingleSelect by remember { mutableStateOf(false) }
-        var selectMode by remember { mutableStateOf(SelectMode.ALL) }
+        var selectMode by remember { mutableStateOf(SelectMode.FILE) }
 
-        var showDialog by remember { mutableStateOf(false) }
-        if (showDialog) {
-            Dialog(onDismissRequest = { showDialog = false }) {
-                Surface {
-                    FilePickerScreen(
-                        filename = if (saveFileMode) filename else null,
-                        onlyShowDir = isOnlyDir,
-                        singleSelect = isSingleSelect,
-                        selectMode = selectMode
-                    )
-                }
-            }
-        }
-        Scaffold { paddings ->
-            Column(
-                Modifier
-                    .padding(paddings)
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CheckBox(text = "Save file", checked = saveFileMode) {
-                    saveFileMode = it
-                }
-                AnimatedVisibility(visible = saveFileMode) {
-                    TextField(value = filename, onValueChange = { filename = it })
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedCard {
-                    Column(Modifier.padding(8.dp)) {
-
-                        Text(text = "Select", style = MaterialTheme.typography.titleMedium)
-                        Row {
-                            RadioButton(
-                                text = "All",
-                                checked = selectMode == SelectMode.ALL
-                            ) {
-                                selectMode = SelectMode.ALL
-                            }
-
-                            RadioButton(
-                                text = "File",
-                                checked = selectMode == SelectMode.FILE
-                            ) {
-                                selectMode = SelectMode.FILE
-                            }
-
-                            RadioButton(
-                                text = "Folder",
-                                checked = selectMode == SelectMode.FOLDER
-                            ) {
-                                selectMode = SelectMode.FOLDER
-                            }
+        Surface {
+            FilePickerScreen(
+                onlyShowDir = isOnlyDir,
+                singleSelect = isSingleSelect,
+                selectMode = selectMode,
+                onSelectFile={
+                    println("Selected file: ${it.name} ${it.inputStream().useImpl {
+                        it.read().apply {
+                            println("Content: $this")
                         }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-                        CheckBox(text = "Single select", checked = isSingleSelect) {
-                            isSingleSelect = it
-                        }
-                    }
+                    }}")
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { showDialog = true }) {
-                    Text("Dialog")
-                }
-            }
-
+            )
         }
     }
 }

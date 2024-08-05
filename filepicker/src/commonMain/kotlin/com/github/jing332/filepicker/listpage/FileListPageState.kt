@@ -1,6 +1,5 @@
 package com.github.jing332.filepicker.listpage
 
-import android.os.Environment
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
@@ -18,6 +17,7 @@ import com.github.jing332.filepicker.SearchType
 import com.github.jing332.filepicker.SortConfig
 import com.github.jing332.filepicker.SortType
 import com.github.jing332.filepicker.ViewType
+import com.github.jing332.filepicker.getExternalStorageDirectory
 import com.github.jing332.filepicker.model.BackFileModel
 import com.github.jing332.filepicker.model.IFileModel
 import com.github.jing332.filepicker.utils.StringUtils.sizeToReadable
@@ -26,9 +26,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Locale
-import kotlin.system.measureTimeMillis
+import kotlin.time.measureTime
 
 @Composable
 fun rememberFileListPageState() = remember {
@@ -36,14 +34,14 @@ fun rememberFileListPageState() = remember {
 }
 
 class FileListPageState(
-    val path: String = Environment.getExternalStorageDirectory().absolutePath,
+    val path: String = getExternalStorageDirectory(),
     initialViewType: Int = ViewType.LIST,
     initialSortConfig: SortConfig = SortConfig(),
     configuration: FilePickerConfiguration = FilePickerConfiguration(),
 ) {
     companion object {
         private val dateFormatter by lazy {
-            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            DateFormatterKmp("yyyy-MM-dd HH:mm:ss")
         }
     }
 
@@ -111,7 +109,7 @@ class FileListPageState(
                         SortType.TYPE -> it.name.split(".").lastOrNull() ?: ""
                         else -> it.name
                     }
-                    str.lowercase(Locale.getDefault())
+                    str.lowercase()
                 }
             )
         ).run {
@@ -126,7 +124,7 @@ class FileListPageState(
                 isCheckable.value = false
             }
 
-        val cost = measureTimeMillis {
+        val cost = measureTime {
             items += file.filesSortAndFilter(sortConfig, config!!.fileFilter).map {
                 FileItem(it)
             }

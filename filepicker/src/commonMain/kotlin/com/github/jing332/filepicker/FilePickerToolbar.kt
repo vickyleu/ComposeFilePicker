@@ -1,7 +1,5 @@
 package com.github.jing332.filepicker
 
-import android.util.Log
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Column
@@ -10,14 +8,13 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.RadioButtonChecked
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
@@ -40,7 +37,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selectableGroup
@@ -50,6 +46,17 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.navigator.internal.BackHandler
 import compose_filepicker.filepicker.generated.resources.Res
+import compose_filepicker.filepicker.generated.resources.cancel
+import compose_filepicker.filepicker.generated.resources.cancel_select
+import compose_filepicker.filepicker.generated.resources.grid
+import compose_filepicker.filepicker.generated.resources.list
+import compose_filepicker.filepicker.generated.resources.more_options
+import compose_filepicker.filepicker.generated.resources.new_folder
+import compose_filepicker.filepicker.generated.resources.ok
+import compose_filepicker.filepicker.generated.resources.refresh
+import compose_filepicker.filepicker.generated.resources.search
+import compose_filepicker.filepicker.generated.resources.select
+import compose_filepicker.filepicker.generated.resources.sort_by
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import org.jetbrains.compose.resources.stringResource
@@ -119,7 +126,7 @@ fun FilePickerToolbar(
                     },
                     actions = {
                         TextButton(onClick = onConfirmSelect) {
-                            Text(stringResource( Res.string.select))
+                            Text(stringResource(Res.string.select))
                         }
 //                    IconButton(onClick = {  }) {
 //                        Icon(Icons.Default.MoreVert, stringResource(R.string.more_options))
@@ -170,7 +177,7 @@ fun FilePickerToolbar(
                                     runCatching {
                                         onNewFolder(it)
                                     }.onFailure { t ->
-                                        Log.e(TAG, "newFolder", t)
+                                        println("$TAG newFolder $t")
                                     }
                                 }
                             )
@@ -182,7 +189,7 @@ fun FilePickerToolbar(
                                 }
                                 IconButton(onClick = { addFolderDialog = true }) {
                                     Icon(
-                                        Icons.Default.CreateNewFolder,
+                                        Icons.Default.Star,
                                         stringResource(Res.string.new_folder)
                                     )
                                 }
@@ -219,7 +226,7 @@ fun FilePickerToolbar(
                                 Divider(Modifier.fillMaxWidth())
                                 DropdownMenuItem(
                                     text = { Text(stringResource(Res.string.sort_by)) },
-                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, null) },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Send, null) },
                                     onClick = {
                                         showOptions = false
                                         showSortConfigDialog = true
@@ -266,9 +273,9 @@ internal fun RadioDropdownMenuItem(
         onClick = onClick,
         leadingIcon = {
             if (checked)
-                Icon(Icons.Default.RadioButtonChecked, null)
+                Icon(Icons.Default.CheckCircle, null)
             else
-                Icon(Icons.Default.RadioButtonUnchecked, null)
+                Icon(Icons.Default.CheckCircle, null)
         }
     )
 }

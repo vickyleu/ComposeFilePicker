@@ -1,5 +1,13 @@
 package com.github.jing332.compose_filepicker
 
+import android.app.Application
+import android.content.Context
+import android.os.Build
+import android.os.LocaleList
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import java.util.Locale
+
 class App : Application() {
     @Suppress("DEPRECATION")
     private fun setLocale(context: Context, locale: Locale) {

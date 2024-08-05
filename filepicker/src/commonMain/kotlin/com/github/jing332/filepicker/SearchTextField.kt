@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +29,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import compose_filepicker.filepicker.generated.resources.Res
+import compose_filepicker.filepicker.generated.resources.all
+import compose_filepicker.filepicker.generated.resources.cancel_search
+import compose_filepicker.filepicker.generated.resources.file
+import compose_filepicker.filepicker.generated.resources.folder
+import compose_filepicker.filepicker.generated.resources.search
+import compose_filepicker.filepicker.generated.resources.search_type
 import org.jetbrains.compose.resources.stringResource
 
 object SearchType {
@@ -60,7 +67,7 @@ internal fun SearchTextField(
     ) {
         var showTypeOptions by rememberSaveable { mutableStateOf(false) }
         IconButton(onClick = { showTypeOptions = true }) {
-            Icon(Icons.Default.AccountTree, stringResource(Res.string.search_type))
+            Icon(Icons.Default.Search, stringResource(Res.string.search_type))
             DropdownMenu(
                 expanded = showTypeOptions,
                 onDismissRequest = { showTypeOptions = false }) {

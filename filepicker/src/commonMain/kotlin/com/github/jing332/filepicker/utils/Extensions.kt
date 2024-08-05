@@ -1,21 +1,12 @@
 package com.github.jing332.filepicker.utils
 
-import android.annotation.SuppressLint
-import android.os.Bundle
-import android.view.View
-import androidx.core.net.toUri
+import androidx.core.bundle.Bundle
 import androidx.navigation.NavController
-import androidx.navigation.NavDeepLinkRequest
-import androidx.navigation.NavDestination
 import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
 
-fun View.performLongPress() {
-    this.isHapticFeedbackEnabled = true
-    this.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-}
 
-@SuppressLint("RestrictedApi")
+@Suppress("RestrictedApi")
 fun NavController.navigate(
     route: String,
     argsBuilder: Bundle.() -> Unit = {},
@@ -28,23 +19,29 @@ fun NavController.navigate(
 /*
 * 可传递 Bundle 到 Navigation
 * */
-@SuppressLint("RestrictedApi")
+@Suppress("RestrictedApi")
 fun NavController.navigate(
     route: String,
     args: Bundle,
     navOptions: NavOptions? = null,
     navigatorExtras: Navigator.Extras? = null
 ) {
+    /*val routeLink = NavDeepLink.Builder()
+        .setUriPattern(route)
+        .build()
+    //  kmm是上面的*/
+
+    /*//以下是Android的
     val routeLink = NavDeepLinkRequest
         .Builder
         .fromUri(NavDestination.createRoute(route).toUri())
-        .build()
+        .build()*/
 
-    val deepLinkMatch = graph.matchDeepLink(routeLink)
+    val deepLinkMatch = graph.matchDeepLink(route)
     if (deepLinkMatch != null) {
         val destination = deepLinkMatch.destination
-        val id = destination.id
-        navigate(id, args, navOptions, navigatorExtras)
+        val route = destination.route ?: return
+        navigate(route, args, navOptions, navigatorExtras)
     } else {
         navigate(route, navOptions, navigatorExtras)
     }

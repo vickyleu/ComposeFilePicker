@@ -10,6 +10,15 @@ plugins {
 }
 
 kotlin {
+    @Suppress("OPT_IN_USAGE")
+    compilerOptions {
+        freeCompilerArgs = listOf(
+            "-Xexpect-actual-classes", // remove warnings for expect classes
+            "-Xskip-prerelease-check",
+            "-opt-in=kotlinx.cinterop.ExperimentalForeignApi",
+            "-opt-in=org.jetbrains.compose.resources.InternalResourceApi",
+        )
+    }
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(libs.versions.jvmTarget.get()))
     }
@@ -49,16 +58,20 @@ kotlin {
             implementation(libs.coil.core)
             api(libs.coil.compose)
 
+            implementation("com.squareup.okio:okio:3.9.0")
+
+
 
             implementation(libs.voyager.navigator)
             implementation(libs.voyager.screenmodel)
             implementation(libs.voyager.navigator.bottomsheet)
             implementation(libs.voyager.navigator.tab)
-
+            implementation("org.jetbrains.androidx.core:core-bundle:1.0.0")
         }
 
         androidMain.dependencies {
             implementation(libs.accompanist.permissions)
+            implementation(libs.androidx.documentfile)
         }
 
         iosMain.get().apply {

@@ -1,22 +1,30 @@
 package com.github.jing332.filepicker.model
 
-import java.io.File
+import com.github.jing332.filepicker.base.FileImpl
+import com.github.jing332.filepicker.base.inputStream
+import com.github.jing332.filepicker.base.isLocalFile
+import com.github.jing332.filepicker.base.outputStream
+import com.github.jing332.filepicker.base.resolve
+
 
 data class NormalFile(
-    private val file: File,
+    private val file: FileImpl,
 ) : IFileModel() {
     override val name: String
-        get() = file.name
+        get() = file.getName()
     override val path: String
-        get() = file.absolutePath
+        get() = file.getAbsolutePath()
     override val isDirectory: Boolean
-        get() = file.isDirectory
+        get() = file.isDirectory()
     override val fileCount: Int
         get() = file.list()?.size ?: 0
     override val time: Long
         get() = file.lastModified()
     override val size: Long
         get() = file.length()
+
+    override val isLocalFile: Boolean
+        get() = file.isLocalFile()
 
     override fun files(): List<IFileModel> {
         return file.listFiles()?.map { NormalFile(it) } ?: emptyList()

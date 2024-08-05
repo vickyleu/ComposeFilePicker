@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -88,7 +89,7 @@ fun FileNavBar(
                 if (index != list.size - 1) {
                     Icon(
                         modifier = Modifier,
-                        imageVector = Icons.Default.ChevronRight,
+                        imageVector = Icons.Default.Favorite,
                         contentDescription = null
                     )
                 }
