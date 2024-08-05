@@ -1,5 +1,6 @@
 package com.github.jing332.filepicker
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Row
@@ -73,7 +74,6 @@ fun FileNavBar(
                             },
                             onLongClick = {
                                 showToast(context, item.path)
-
                             }
                         ),
                 ) {
@@ -98,4 +98,8 @@ fun FileNavBar(
     }
 }
 
-expect fun showToast(context: PlatformContext, msg: String)
+fun showToast(context: PlatformContext, msg: String) {
+    Toast
+        .makeText(context, msg, Toast.LENGTH_SHORT)
+        .show()
+}

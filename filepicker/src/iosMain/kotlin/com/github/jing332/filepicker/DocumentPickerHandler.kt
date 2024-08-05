@@ -3,6 +3,7 @@ package com.github.jing332.filepicker
 import com.github.jing332.filepicker.base.FileImpl
 import com.github.jing332.filepicker.model.NormalFile
 import kotlinx.cinterop.BetaInteropApi
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
@@ -15,7 +16,6 @@ import kotlinx.cinterop.toKString
 import kotlinx.cinterop.value
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import platform.CoreFoundation.CFStringGetCString
@@ -37,7 +37,7 @@ import platform.UIKit.UIDocumentPickerMode
 import platform.UIKit.UIDocumentPickerViewController
 import platform.UIKit.UIViewController
 
-@OptIn(BetaInteropApi::class)
+@OptIn(BetaInteropApi::class, ExperimentalForeignApi::class)
 @ExportObjCClass
 class DocumentPickerHandler(private val scope: CoroutineScope) :
     UIViewController(nibName = null, bundle = null), UIDocumentPickerDelegateProtocol {
@@ -58,6 +58,7 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
             }
         }
     }
+
 
     fun pickDocument(callback: (NormalFile) -> Unit) {
         this.callback = callback
@@ -203,14 +204,14 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
                 controller.dismissViewControllerAnimated(true, null)
                 callback?.invoke(file)
             }
-           /* withContext(Dispatchers.IO) {
-                if (file.isLocalFile.not()) {
-                    println("不是本地文件, 开始下载")
-                    file.downloadFile()
-                } else {
+            /* withContext(Dispatchers.IO) {
+                 if (file.isLocalFile.not()) {
+                     println("不是本地文件, 开始下载")
+                     file.downloadFile()
+                 } else {
 
-                }
-            }*/
+                 }
+             }*/
         }
     }
 

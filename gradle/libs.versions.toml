@@ -15,8 +15,7 @@ jvmTarget = "17"
 
 dokka = "1.9.20"
 kotlinxDatetime = "0.6.0"
-compose-voyager = "1.1.0-beta01"
-navigationCompose = "2.8.0-alpha02"
+navigationCompose = "2.7.6"
 
 coreKtx = "1.12.0"
 junit = "4.13.2"
@@ -31,16 +30,13 @@ accompanist = "0.34.0"
 documentfile = "1.0.1"
 
 [libraries]
-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+navigation-compose  = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "jetpack-compose-bom" }
 coroutines-bom = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-bom", version.ref = "coroutines-bom" }
 coil-bom = { module = "io.coil-kt.coil3:coil-bom", version.ref = "coil-bom" }
 
-voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "compose-voyager" }
-voyager-screenmodel = { module = "cafe.adriel.voyager:voyager-screenmodel", version.ref = "compose-voyager" }
-voyager-navigator-tab = { module = "cafe.adriel.voyager:voyager-tab-navigator", version.ref = "compose-voyager" }
-voyager-transitions = { module = "cafe.adriel.voyager:voyager-transitions", version.ref = "compose-voyager" }
-voyager-navigator-bottomsheet = { module = "cafe.adriel.voyager:voyager-bottom-sheet-navigator", version.ref = "compose-voyager" }
+
+
 coil-core = { module = "io.coil-kt.coil3:coil"}
 coil-compose = { module = "io.coil-kt.coil3:coil-compose"}
 coil-video = { module = "io.coil-kt.coil3:coil-video"}

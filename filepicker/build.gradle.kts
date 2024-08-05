@@ -54,24 +54,17 @@ kotlin {
             implementation(project.dependencies.platform(libs.compose.bom))
             implementation(project.dependencies.platform(libs.coroutines.bom))
             implementation(project.dependencies.platform(libs.coil.bom))
-            implementation(libs.navigation.compose)
+//
             implementation(libs.coil.core)
             api(libs.coil.compose)
 
             implementation("com.squareup.okio:okio:3.9.0")
-
-
-
-            implementation(libs.voyager.navigator)
-            implementation(libs.voyager.screenmodel)
-            implementation(libs.voyager.navigator.bottomsheet)
-            implementation(libs.voyager.navigator.tab)
-            implementation("org.jetbrains.androidx.core:core-bundle:1.0.0")
         }
 
         androidMain.dependencies {
             implementation(libs.accompanist.permissions)
-            implementation(libs.androidx.documentfile)
+            implementation(libs.navigation.compose)
+//            implementation(libs.androidx.documentfile)
         }
 
         iosMain.get().apply {

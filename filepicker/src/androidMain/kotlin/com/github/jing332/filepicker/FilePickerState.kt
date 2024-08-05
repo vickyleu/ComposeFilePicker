@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.core.bundle.Bundle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.github.jing332.filepicker.listpage.FileListPageState
@@ -54,11 +53,10 @@ class FilePickerState(
 
     fun navigate(path: String, state: FileListPageState = FileListPageState()) {
         fileListStates[path] = state
-        navController.navigate(Contants.ROUTE_PAGE, Bundle().apply {
-            putString(com.github.jing332.filepicker.Contants.ARG_PATH, path)
-        })
+        navController.navigate(Contants.ROUTE_PAGE, mapOf(Contants.ARG_PATH to path))
     }
 
+    // 回到首页
     fun reload(path: String = currentPath) {
         navController.popBackStack()
         navigate(path)

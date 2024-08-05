@@ -17,6 +17,7 @@ import com.github.jing332.filepicker.SearchType
 import com.github.jing332.filepicker.SortConfig
 import com.github.jing332.filepicker.SortType
 import com.github.jing332.filepicker.ViewType
+import com.github.jing332.filepicker.base.DateFormatterKmp
 import com.github.jing332.filepicker.getExternalStorageDirectory
 import com.github.jing332.filepicker.model.BackFileModel
 import com.github.jing332.filepicker.model.IFileModel
@@ -78,17 +79,6 @@ class FileListPageState(
         return list.find { it == item.model } != null
     }
 
-    fun checkAll() {
-        for (item in items) {
-            check(item, true)
-        }
-    }
-
-    fun uncheckAll() {
-        for (item in items) {
-            check(item, false)
-        }
-    }
 
     fun hasChecked(): Boolean {
         return items.any { it.isChecked.value }

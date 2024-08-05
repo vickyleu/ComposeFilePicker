@@ -1,6 +1,5 @@
 package com.github.jing332.filepicker.model
 
-import androidx.documentfile.provider.DocumentFile
 import coil3.PlatformContext
 import com.github.jing332.filepicker.base.InputStreamImpl
 import com.github.jing332.filepicker.base.OutputStreamImpl

@@ -1,8 +1,7 @@
 package com.github.jing332.filepicker
 
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
-import com.github.jing332.filepicker.model.NormalFile
+import com.github.jing332.filepicker.model.IFileModel
 import kotlinx.coroutines.CoroutineScope
 import platform.Foundation.NSString
 import platform.Foundation.stringWithFormat
@@ -19,22 +18,52 @@ actual fun String.formatImpl(vararg args: Any): String {
         4 -> NSString.stringWithFormat(this, args[0], args[1], args[2], args[3])
         5 -> NSString.stringWithFormat(this, args[0], args[1], args[2], args[3], args[4])
         6 -> NSString.stringWithFormat(this, args[0], args[1], args[2], args[3], args[4], args[5])
-        7 -> NSString.stringWithFormat(this, args[0], args[1], args[2], args[3], args[4], args[5], args[6])
-        8 -> NSString.stringWithFormat(this, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7])
-        9 -> NSString.stringWithFormat(this, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8])
+        7 -> NSString.stringWithFormat(
+            this,
+            args[0],
+            args[1],
+            args[2],
+            args[3],
+            args[4],
+            args[5],
+            args[6]
+        )
+
+        8 -> NSString.stringWithFormat(
+            this,
+            args[0],
+            args[1],
+            args[2],
+            args[3],
+            args[4],
+            args[5],
+            args[6],
+            args[7]
+        )
+
+        9 -> NSString.stringWithFormat(
+            this,
+            args[0],
+            args[1],
+            args[2],
+            args[3],
+            args[4],
+            args[5],
+            args[6],
+            args[7],
+            args[8]
+        )
+
         else -> error("Too many arguments.")
     }
 }
 
-actual fun navControllerSetup(navController: NavHostController) {
-    //
-}
 
-actual fun getPlatform(): Platform {
-    return Platform.IOS
-}
 @Composable
-actual fun startPickerHandler(scope: CoroutineScope, callback: (NormalFile) -> Unit) {
+actual fun startPickerHandler(
+    scope: CoroutineScope,
+    callback: ((IFileModel) -> Unit),
+) {
     (UIApplication.sharedApplication.windows.first() as UIWindow).apply {
         val handler = DocumentPickerHandler(scope)
         rootViewController?.presentViewController(handler, true) {
