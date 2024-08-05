@@ -35,3 +35,5 @@ actual inline fun FileImpl.uri(): Uri {
 }
 
 actual inline fun FileImpl.isLocalFile()=true
+
+actual typealias ByteArrayOutputStreamImpl = java.io.ByteArrayOutputStream

@@ -11,6 +11,7 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.free
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.nativeHeap
+import kotlinx.cinterop.plus
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.refTo
 import kotlinx.cinterop.reinterpret
@@ -20,10 +21,14 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileModificationDate
 import platform.Foundation.NSFileSize
 import platform.Foundation.NSInputStream
+import platform.Foundation.NSMakeRange
+import platform.Foundation.NSMutableData
 import platform.Foundation.NSNumber
 import platform.Foundation.NSOutputStream
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLUbiquitousItemIsDownloadedKey
+import platform.Foundation.appendBytes
+import platform.Foundation.getBytes
 import platform.Foundation.inputStreamWithFileAtPath
 import platform.Foundation.outputStreamToFileAtPath
 import platform.Foundation.timeIntervalSince1970
@@ -75,6 +80,7 @@ actual abstract class InputStreamImpl : StreamImpl {
 actual abstract class OutputStreamImpl : StreamImpl {
     actual abstract fun write(b: Int)
     actual open fun write(b: ByteArray) {
+        write(b, 0, b.size)
     }
 
     actual open fun write(b: ByteArray, off: Int, len: Int) {
@@ -96,6 +102,8 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
         inputStream.open()
     }
 
+    private var isEnded = false
+
     private var skipBuffer = 0L
 
     override fun read(): Int {
@@ -104,10 +112,13 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
         val bytesRead = inputStream.read(buffer.ptr, 1024u)
         try {
             println("bytesRead: $bytesRead")
-            return if (bytesRead > 0) {
+            return (if (bytesRead > 0) {
                 buffer.value.toInt()
-//            buffer[0].toInt()
-            } else -1
+            } else -1).apply {
+                if (this <= 0) {
+                    isEnded = true
+                }
+            }
         } finally {
             nativeHeap.free(buffer.ptr)
         }
@@ -118,21 +129,31 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
         memScoped {
             val buffer = b.refTo(off).getPointer(this) as CPointer<uint8_tVar>
             val bytesRead: NSInteger = inputStream.read(buffer, len.toULong())
-            return bytesRead.toInt()
+            return bytesRead.toInt().apply {
+                if (this <= 0) {
+                    isEnded = true
+                }
+            }
         }
     }
 
     override fun read(b: ByteArray): Int {
-        return read(b, skipBuffer.toInt(), b.size)
+        val skip = skipBuffer.toInt()
+        skipBuffer = 0
+        return read(b, skip, b.size).apply {
+            if (this <= 0) {
+                isEnded = true
+            }
+        }
     }
 
     override fun skip(n: Long): Long {
-        this.skipBuffer = n
-        return n
+        this.skipBuffer += n
+        return this.skipBuffer
     }
 
     override fun available(): Int {
-        return if (inputStream.hasBytesAvailable) {
+        return if (isEnded.not() && inputStream.hasBytesAvailable) {
             read()
         } else 0
     }
@@ -227,7 +248,18 @@ actual class FileImpl actual constructor(path: String) {
     }
 
     actual fun length(): Long {
-        return NSFileManager.defaultManager.attributesOfItemAtPath(filePath, error = null)?.let {
+
+        println(
+            "filePath:::$filePath  ${
+                NSFileManager.defaultManager.fileExistsAtPath(
+                    filePath,
+                    isDirectory = null
+                )
+            }"
+        )
+        val attr = NSFileManager.defaultManager.attributesOfItemAtPath(filePath, error = null)
+        println("attr:::$attr")
+        return attr?.let {
             (it[NSFileSize] as? NSNumber)?.longValue ?: 0L
         } ?: 0L
     }
@@ -282,4 +314,26 @@ actual inline fun FileImpl.isLocalFile(): Boolean {
     )
     val isDownloaded = values?.get(NSURLUbiquitousItemIsDownloadedKey) as? Boolean ?: false
     return isDownloaded
+}
+
+actual class ByteArrayOutputStreamImpl actual constructor() : OutputStreamImpl() {
+    private val nsDate = NSMutableData()
+    actual fun toByteArray(): ByteArray {
+        val buffer = ByteArray(nsDate.length.toInt())
+        memScoped {
+            nsDate.getBytes(buffer.refTo(0).getPointer(this), NSMakeRange(0u, nsDate.length))
+            val byteArray = buffer.copyOf(nsDate.length.toInt())
+            return byteArray
+        }
+    }
+
+    override fun write(b: ByteArray, off: Int, len: Int) {
+        memScoped {
+            val pointer = b.refTo(0).getPointer(this) + off
+            nsDate.appendBytes(pointer, len.toULong())
+        }
+    }
+
+    override fun write(b: Int) {
+    }
 }

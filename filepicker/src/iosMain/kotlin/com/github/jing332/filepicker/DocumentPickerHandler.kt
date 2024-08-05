@@ -27,8 +27,11 @@ import platform.CoreServices.kUTTypeItem
 import platform.Foundation.NSError
 import platform.Foundation.NSFileCoordinator
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSThread
 import platform.Foundation.NSURL
+import platform.Foundation.URLByAppendingPathComponent
+import platform.Foundation.lastPathComponent
 import platform.UIKit.UIDocumentPickerDelegateProtocol
 import platform.UIKit.UIDocumentPickerMode
 import platform.UIKit.UIDocumentPickerViewController
@@ -37,8 +40,7 @@ import platform.UIKit.UIViewController
 @OptIn(BetaInteropApi::class)
 @ExportObjCClass
 class DocumentPickerHandler(private val scope: CoroutineScope) :
-    UIViewController(nibName = null, bundle = null),
-    UIDocumentPickerDelegateProtocol {
+    UIViewController(nibName = null, bundle = null), UIDocumentPickerDelegateProtocol {
     private var callback: ((NormalFile) -> Unit)? = null
 
     private fun CFStringRef.toKString(): String {
@@ -47,10 +49,7 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
         val buffer = ByteArray(maxSize.toInt())
         return memScoped {
             if (CFStringGetCString(
-                    this@toKString,
-                    buffer.refTo(0),
-                    maxSize,
-                    kCFStringEncodingUTF8
+                    this@toKString, buffer.refTo(0), maxSize, kCFStringEncodingUTF8
                 )
             ) {
                 buffer.toKString()
@@ -81,50 +80,80 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
 //
 //        val documentPicker = UIDocumentPickerViewController(uRL = destinationPath, inMode = UIDocumentPickerMode.UIDocumentPickerModeExportToService)
         val documentPicker = UIDocumentPickerViewController(
-            documentTypes = documentTypes,
-            inMode = UIDocumentPickerMode.UIDocumentPickerModeImport
+            documentTypes = documentTypes, inMode = UIDocumentPickerMode.UIDocumentPickerModeImport
         )
         documentPicker.delegate = this
         this.presentViewController(documentPicker, animated = true, completion = null)
     }
 
     override fun documentPicker(
-        controller: UIDocumentPickerViewController,
-        didPickDocumentAtURL: NSURL
+        controller: UIDocumentPickerViewController, didPickDocumentAtURL: NSURL
     ) {
-        val url = didPickDocumentAtURL.absoluteString ?: return run {
-            controller.dismissViewControllerAnimated(true, null)
+        val url = didPickDocumentAtURL
+        var newUrl = url
+        // Create file URL to temporary folder
+        var tempURL = NSURL(fileURLWithPath = NSTemporaryDirectory())
+        // Apend filename (name+extension) to URL
+        tempURL = tempURL.URLByAppendingPathComponent(url.lastPathComponent!!)!!
+        try {
+            // If file with same name exists remove it (replace file with new one)
+            if (NSFileManager.defaultManager.fileExistsAtPath(tempURL.path!!)) {
+                NSFileManager.defaultManager.removeItemAtPath(tempURL.path!!, error = null)
+            }
+            // Move file from app_id-Inbox to tmp/filename
+            NSFileManager.defaultManager.moveItemAtPath(
+                url.path!!, toPath = tempURL.path!!, error = null
+            )
+
+            newUrl = tempURL
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        val file = NormalFile(FileImpl(url))
+        val file = NormalFile(FileImpl(newUrl.path!!))
+
         scope.launch {
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                //关掉当前controller
+                controller.dismissViewControllerAnimated(true, null)
+                callback?.invoke(file)
+            }
+            /*withContext(Dispatchers.IO) {
                 if (file.isLocalFile.not()) {
-                    NSFileManager.defaultManager.fileExistsAtPath(file.path, isDirectory = null)?.let {
-                        println("文件不存在 $it")
-                    }
                     println("不是本地文件, 开始下载")
                     file.downloadFile()
                 } else {
                     println("是本地文件")
-                    withContext(Dispatchers.Main) {
-                        //关掉当前controller
-                        controller.dismissViewControllerAnimated(true, null)
-                        callback?.invoke(file)
-                    }
+
                 }
-            }
+            }*/
         }
     }
 
     override fun documentPicker(
-        controller: UIDocumentPickerViewController,
-        didPickDocumentsAtURLs: List<*>
+        controller: UIDocumentPickerViewController, didPickDocumentsAtURLs: List<*>
     ) {
-        val url = (didPickDocumentsAtURLs.firstOrNull() as? NSURL)?.absoluteString ?: return run {
+        val url = (didPickDocumentsAtURLs.firstOrNull() as? NSURL) ?: return run {
             controller.dismissViewControllerAnimated(true, null)
         }
-        val file = NormalFile(FileImpl(url))
-
+        var newUrl = url
+        // Create file URL to temporary folder
+        var tempURL = NSURL(fileURLWithPath = NSTemporaryDirectory())
+        // Apend filename (name+extension) to URL
+        tempURL = tempURL.URLByAppendingPathComponent(url.lastPathComponent!!)!!
+        try {
+            // If file with same name exists remove it (replace file with new one)
+            if (NSFileManager.defaultManager.fileExistsAtPath(tempURL.path!!)) {
+                NSFileManager.defaultManager.removeItemAtPath(tempURL.path!!, error = null)
+            }
+            // Move file from app_id-Inbox to tmp/filename
+            NSFileManager.defaultManager.moveItemAtPath(
+                url.path!!, toPath = tempURL.path!!, error = null
+            )
+            newUrl = tempURL
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        val file = NormalFile(FileImpl(newUrl.path!!))
         // CloudKit Container ID
         /*val containerIdentifier = "iCloud.compose"
         val urlUbiquity =
@@ -167,73 +196,91 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
                     }
                 }
         }*/
-
         scope.launch {
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                println("是本地文件")
+                //关掉当前controller
+                controller.dismissViewControllerAnimated(true, null)
+                callback?.invoke(file)
+            }
+           /* withContext(Dispatchers.IO) {
                 if (file.isLocalFile.not()) {
                     println("不是本地文件, 开始下载")
-                    NSFileManager.defaultManager.fileExistsAtPath(file.path, isDirectory = null)?.let {
-                        println("文件不存在 $it")
-                    }
                     file.downloadFile()
                 } else {
-                    withContext(Dispatchers.Main) {
-                        println("是本地文件")
-                        //关掉当前controller
-                        controller.dismissViewControllerAnimated(true, null)
-                        callback?.invoke(file)
-                    }
+
                 }
-            }
+            }*/
         }
     }
 
     private suspend fun NormalFile.downloadFile() {
         val url = NSURL(fileURLWithPath = this.path)
-        if (url.startAccessingSecurityScopedResource()) {
-            try {
-                val localURL = downloadICloudFileIfNeeded()
-                if (localURL != null && NSFileManager.defaultManager.fileExistsAtPath(localURL.path!!)) {
-                    println("文件下载完成: ${localURL.path}")
-                } else {
-                    println("文件下载失败")
-                }
-            } finally {
-                url.stopAccessingSecurityScopedResource()
+        try {
+            url.startAccessingSecurityScopedResource() //TODO fucking idiot apis, always return false
+            val localURL = downloadICloudFileIfNeeded()
+            if (localURL != null && NSFileManager.defaultManager.fileExistsAtPath(localURL.path!!)) {
+                println("文件下载完成: ${localURL.path}")
+            } else {
+                println("文件下载失败")
             }
-        } else {
-            println("无法访问文件:${this.path}")
+        } finally {
+            url.stopAccessingSecurityScopedResource()
         }
+
     }
 
-    private suspend fun NormalFile.downloadICloudFileIfNeeded():NSURL? {
+    private suspend fun NormalFile.downloadICloudFileIfNeeded(): NSURL? {
         val coordinator = NSFileCoordinator()
         val error = nativeHeap.alloc<ObjCObjectVar<NSError?>>()
         try {
             val originUrl = NSURL(fileURLWithPath = this.path)
-            if(NSFileManager.defaultManager.isUbiquitousItemAtURL(originUrl).not()){
+            if (NSFileManager.defaultManager.fileExistsAtPath(this.path, isDirectory = null)) {
+                println("文件已经存在磁盘上了")
                 withContext(Dispatchers.Main) {
                     this@DocumentPickerHandler.dismissViewControllerAnimated(true, null)
                     this@DocumentPickerHandler.callback?.invoke(this@downloadICloudFileIfNeeded)
                 }
                 return originUrl
-            }else{
+            } else {
+                println("文件未在磁盘上")
                 var isDownloading = true
-                coordinator.coordinateReadingItemAtURL(originUrl, options = 0u, error = error.ptr
+                coordinator.coordinateReadingItemAtURL(
+                    originUrl, options = 0u, error = error.ptr
                 ) { url ->
-                    println("开始下载文件 $url")
                     if (url != null) {
+                        /**
+                         * NSDictionary *attributes = [NSFileManager.defaultManager attributesOfItemAtPath:newURL.path error:nil];
+                         *     if(NSOrderedSame == [attributes.fileModificationDate compare:self.fileModificationDate]) {
+                         *       return; // no content change
+                         *     }
+                         */
                         val fileManager = NSFileManager.defaultManager
-                        val errorDownload = nativeHeap.alloc<ObjCObjectVar<NSError?>>()
-                        fileManager.startDownloadingUbiquitousItemAtURL(url, errorDownload.ptr)
-                        if (errorDownload.value != null) {
-                            println("下载文件失败 ${errorDownload.value?.localizedDescription}")
+                        val exists = fileManager.fileExistsAtPath(url.path!!, isDirectory = null)
+                        if (exists) {
                             scope.launch {
                                 withContext(Dispatchers.Main) {
-                                    this@DocumentPickerHandler.dismissViewControllerAnimated(true, null)
+                                    this@DocumentPickerHandler.dismissViewControllerAnimated(
+                                        true, null
+                                    )
                                 }
                             }
                             isDownloading = false
+                        } else {
+                            println("开始下载文件 $url")
+                            val errorDownload = nativeHeap.alloc<ObjCObjectVar<NSError?>>()
+                            fileManager.startDownloadingUbiquitousItemAtURL(url, errorDownload.ptr)
+                            if (errorDownload.value != null) {
+                                println("下载文件失败 ${errorDownload.value?.localizedDescription}")
+                                scope.launch {
+                                    withContext(Dispatchers.Main) {
+                                        this@DocumentPickerHandler.dismissViewControllerAnimated(
+                                            true, null
+                                        )
+                                    }
+                                }
+                                isDownloading = false
+                            }
                         }
                     }
                 }
@@ -250,14 +297,14 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
                     NSThread.sleepForTimeInterval(0.5)
                     println("等待文件下载完成 ${this.path}")
                 }
-                if(this.isLocalFile){
+                if (this.isLocalFile) {
                     println("文件下载完成 ${this.path}")
                     withContext(Dispatchers.Main) {
                         this@DocumentPickerHandler.dismissViewControllerAnimated(true, null)
                         this@DocumentPickerHandler.callback?.invoke(this@downloadICloudFileIfNeeded)
                     }
                     return originUrl
-                }else{
+                } else {
                     return null
                 }
             }

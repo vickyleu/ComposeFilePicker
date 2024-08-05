@@ -13,6 +13,10 @@ expect abstract class InputStreamImpl {
 
 }
 
+expect class ByteArrayOutputStreamImpl(): OutputStreamImpl {
+    fun toByteArray(): ByteArray
+}
+
 
 expect abstract class OutputStreamImpl {
     abstract fun write(b: Int)

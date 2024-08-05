@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.github.jing332.compose_filepicker.ui.theme.ComposefilepickerTheme
+import com.github.jing332.filepicker.base.ByteArrayOutputStreamImpl
 import com.github.jing332.filepicker.base.useImpl
 
 @Composable
@@ -44,11 +45,20 @@ fun ComposeApp(){
                 singleSelect = isSingleSelect,
                 selectMode = selectMode,
                 onSelectFile={
-                    println("Selected file: ${it.name} ${it.inputStream().useImpl {
-                        it.read().apply {
-                            println("Content: $this")
-                        }
-                    }}")
+                    // 创建一个缓冲区
+                    val buffer = ByteArray(1024)
+                    // 读取字节数
+                    var bytesRead: Int
+                    val inputStream = it.inputStream()
+                    // 读取整个流,将receiver保存到一个ByteArray中
+                    val totalByteArray = ByteArrayOutputStreamImpl()
+                    while (inputStream.read(buffer).also { bytesRead = it } >0 ) {
+                        // 处理读取的数据
+                        val receiver:ByteArray = buffer.copyOf(bytesRead)
+                        totalByteArray.write(receiver)
+                        println("bytesRead:${receiver.size}  ${it.name} ")
+                    }
+                    println("${it.name}  totalByteArray:${totalByteArray.toByteArray().size}")
                 }
             )
         }
