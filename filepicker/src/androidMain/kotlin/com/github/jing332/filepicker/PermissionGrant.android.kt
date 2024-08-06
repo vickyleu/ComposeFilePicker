@@ -33,6 +33,7 @@ actual fun PermissionGrant() {
         )
     val context = LocalPlatformContext.current
     LaunchedEffect(key1 = Unit) {
+        println("PermissionGrant readExtPermission.allPermissionsGranted:${readExtPermission.allPermissionsGranted}")
         if (!readExtPermission.allPermissionsGranted)
             readExtPermission.launchMultiplePermissionRequest()
 
