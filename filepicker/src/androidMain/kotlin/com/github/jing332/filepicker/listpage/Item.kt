@@ -104,7 +104,9 @@ internal fun LongItem(
                 title = title,
                 isChecked = isChecked
             )
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium)
+            Text(subtitle,
+                color = Color.Black,
+                style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
