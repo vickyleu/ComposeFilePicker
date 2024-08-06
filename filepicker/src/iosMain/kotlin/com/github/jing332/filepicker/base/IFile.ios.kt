@@ -17,6 +17,7 @@ import kotlinx.cinterop.refTo
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.value
 import okio.IOException
+import okio.Sink
 import okio.Source
 import okio.Timeout
 import platform.Foundation.NSDate
@@ -78,6 +79,11 @@ actual abstract class InputStreamImpl : StreamImpl {
 
     actual override fun close() {
     }
+}
+
+@Suppress("unused")
+actual fun FileImpl.sink(): Sink {
+    return FileSink(this.outputStream())
 }
 
 @Suppress("unused")

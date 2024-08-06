@@ -3,7 +3,9 @@ package com.github.jing332.filepicker.base
 import androidx.core.net.toUri
 import coil3.Uri
 import coil3.toCoilUri
+import okio.Sink
 import okio.Source
+import okio.sink
 import okio.source
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -17,6 +19,12 @@ actual typealias OutputStreamImpl = java.io.OutputStream
 actual fun InputStreamImpl.source(): Source {
     return this.source()
 }
+
+@Suppress("unused")
+actual fun FileImpl.sink(): Sink{
+    return this.sink(append = false)
+}
+
 
 actual  class FileSource actual constructor(inputStream: InputStreamImpl) :
     Source by inputStream.source()

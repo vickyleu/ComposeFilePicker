@@ -17,6 +17,7 @@ expect abstract class InputStreamImpl {
 }
 
 expect fun InputStreamImpl.source(): Source
+expect fun FileImpl.sink(): Sink
 
 
 expect class ByteArrayOutputStreamImpl() : OutputStreamImpl {
@@ -32,10 +33,9 @@ expect class FileSource(inputStream: InputStreamImpl) : Source{
 }
 
 
-
 @Suppress("UNUSED")
 class FileSink(private val outputStream: OutputStreamImpl) : Sink {
-    override fun write(source: okio.Buffer, byteCount: Long) {
+    override fun write(source: Buffer, byteCount: Long) {
         val byteArray = ByteArray(byteCount.toInt())
         source.readFully(byteArray)
         outputStream.write(byteArray)
