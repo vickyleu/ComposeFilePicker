@@ -161,6 +161,7 @@ fun Title(modifier: Modifier = Modifier, title: String, isChecked: Boolean) {
     Text(
         modifier = modifier,
         text = title,
+        color=Color.Black,
         fontWeight = if (isChecked) FontWeight.Bold else FontWeight.Normal,
         maxLines = 1,
         style = MaterialTheme.typography.titleMedium,

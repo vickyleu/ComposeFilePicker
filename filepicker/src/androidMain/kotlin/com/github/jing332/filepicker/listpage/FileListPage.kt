@@ -36,6 +36,7 @@ fun FileListPage(
     file: IFileModel,
     onBack: () -> Unit,
     onEnter: (IFileModel) -> Unit,
+    onSelect: (IFileModel) -> Unit,
 ) {
     val hasChecked by rememberUpdatedState(newValue = state.hasChecked())
 
@@ -89,6 +90,7 @@ fun FileListPage(
                         else item.fileSize.value,
             onCheckedChange = { _ ->
                 state.selector(item)
+                onSelect.invoke(item.model)
             },
             onClick = {
                 if (item.isBackType) {
@@ -96,11 +98,17 @@ fun FileListPage(
                     onBack()
                 } else if (!hasChecked && !item.isChecked.value && item.isDirectory)
                     onEnter(item.model)
-                else if (item.isCheckable.value) state.selector(item)
+                else if (item.isCheckable.value) {
+                    state.selector(item)
+                    onSelect.invoke(item.model)
+                }
             },
             onLongClick = {
                 if (item.isBackType) onBack()
-                else if (item.isCheckable.value) state.selector(item)
+                else if (item.isCheckable.value) {
+                    state.selector(item)
+                    onSelect.invoke(item.model)
+                }
             },
             gridType = state.viewType == ViewType.GRID
         )

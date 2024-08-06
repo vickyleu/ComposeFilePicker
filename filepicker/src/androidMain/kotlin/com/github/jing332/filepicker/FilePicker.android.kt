@@ -120,6 +120,7 @@ fun FilePicker(
                     sortConfig = config.sortConfig
                     viewType = config.viewType
                 }
+
                 LaunchedEffect(key1 = Unit) {
                     flagCloseSearch.value = true
                     state.currentPath = path
@@ -146,6 +147,9 @@ fun FilePicker(
                             name = enterFile.name,
                             path = enterFile.path
                         )
+                    },
+                    onSelect = {
+                        onSelectFile?.invoke(it)
                     }
                 )
 
