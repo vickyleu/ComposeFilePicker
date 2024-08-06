@@ -6,13 +6,17 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.platform.LocalView
 import com.github.jing332.filepicker.FilePickerConfiguration
 import com.github.jing332.filepicker.ViewType
@@ -24,10 +28,12 @@ import compose_filepicker.filepicker.generated.resources.folder
 import compose_filepicker.filepicker.generated.resources.folder_24px
 import compose_filepicker.filepicker.generated.resources.item_desc
 import compose_filepicker.filepicker.generated.resources.question_mark_24px
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileListPage(
     modifier: Modifier = Modifier,
@@ -58,6 +64,7 @@ fun FileListPage(
     @Composable
     fun itemContent(item: FileItem) {
         if (!item.isVisible.value) return
+        val scope = rememberCoroutineScope()
         Item(
             isChecked = item.isChecked.value,
             isCheckable = if (item.isBackType) false else item.isCheckable.value,
@@ -65,14 +72,16 @@ fun FileListPage(
                 if (item.isDirectory) {
                     Icon(
                         painter = painterResource(Res.drawable.folder_24px),
-                        contentDescription = stringResource(Res.string.folder)
+                        contentDescription = stringResource(Res.string.folder),
+                        tint = { Color.Black }
                     )
                 } else {
                     val fileType = config.fileDetector.detect(item.model)
                     if (fileType == null)
                         Icon(
                             painter = painterResource(Res.drawable.question_mark_24px),
-                            contentDescription = stringResource(Res.string.file)
+                            contentDescription = stringResource(Res.string.file),
+                            tint = { Color.Black }
                         )
                     else
                         fileType.IconContent()
@@ -90,7 +99,9 @@ fun FileListPage(
                         else item.fileSize.value,
             onCheckedChange = { _ ->
                 state.selector(item)
-                onSelect.invoke(item.model)
+                scope.launch {
+                    onSelect.invoke(item.model)
+                }
             },
             onClick = {
                 if (item.isBackType) {
@@ -100,14 +111,18 @@ fun FileListPage(
                     onEnter(item.model)
                 else if (item.isCheckable.value) {
                     state.selector(item)
-                    onSelect.invoke(item.model)
+                    scope.launch {
+                        onSelect.invoke(item.model)
+                    }
                 }
             },
             onLongClick = {
                 if (item.isBackType) onBack()
                 else if (item.isCheckable.value) {
                     state.selector(item)
-                    onSelect.invoke(item.model)
+                    scope.launch {
+                        onSelect.invoke(item.model)
+                    }
                 }
             },
             gridType = state.viewType == ViewType.GRID
