@@ -1,6 +1,10 @@
 package com.github.jing332.filepicker.base
 
 import coil3.Uri
+import okio.Buffer
+import okio.Sink
+import okio.Source
+import okio.Timeout
 
 
 expect abstract class InputStreamImpl {
@@ -10,14 +14,43 @@ expect abstract class InputStreamImpl {
     fun skip(n: Long): Long
     fun available(): Int
     fun close()
-
 }
 
-expect class ByteArrayOutputStreamImpl(): OutputStreamImpl {
+expect fun InputStreamImpl.source(): Source
+
+
+expect class ByteArrayOutputStreamImpl() : OutputStreamImpl {
     fun toByteArray(): ByteArray
     override fun write(b: Int)
 }
 
+@Suppress("UNUSED")
+expect class FileSource(inputStream: InputStreamImpl) : Source{
+    override fun close()
+    override fun read(sink: Buffer, byteCount: Long): Long
+    override fun timeout(): Timeout
+}
+
+
+
+@Suppress("UNUSED")
+class FileSink(private val outputStream: OutputStreamImpl) : Sink {
+    override fun write(source: okio.Buffer, byteCount: Long) {
+        val byteArray = ByteArray(byteCount.toInt())
+        source.readFully(byteArray)
+        outputStream.write(byteArray)
+    }
+
+    override fun flush() {
+        outputStream.flush()
+    }
+
+    override fun timeout(): Timeout = Timeout.NONE
+
+    override fun close() {
+        outputStream.close()
+    }
+}
 
 expect abstract class OutputStreamImpl {
     abstract fun write(b: Int)
@@ -31,9 +64,7 @@ expect abstract class OutputStreamImpl {
 expect inline fun InputStreamImpl.useImpl(block: (InputStreamImpl) -> Unit)
 expect inline fun OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> Unit)
 
-expect class FileImpl {
-    constructor(path: String)
-
+expect class FileImpl(path: String) {
     fun isDirectory(): Boolean
     fun list(): Array<String>?
     fun lastModified(): Long
@@ -45,9 +76,9 @@ expect class FileImpl {
     fun getName(): String
 }
 
-expect inline fun FileImpl.uri(): Uri
+expect fun FileImpl.uri(): Uri
 
-expect inline fun FileImpl.isLocalFile(): Boolean
-expect inline fun FileImpl.inputStream(): InputStreamImpl
-expect inline fun FileImpl.outputStream(): OutputStreamImpl
+expect fun FileImpl.isLocalFile(): Boolean
+expect fun FileImpl.inputStream(): InputStreamImpl
+expect fun FileImpl.outputStream(): OutputStreamImpl
 expect fun FileImpl.resolve(relative: String): FileImpl

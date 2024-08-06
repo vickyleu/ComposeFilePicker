@@ -11,6 +11,7 @@ import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSString
 
 //  iOS 中通过文件名获取文件类型
+@Suppress("UNCHECKED_CAST")
 actual fun getMineType(name: String): String {
     val fileExtension = name.substringAfterLast('.', "")
     memScoped {

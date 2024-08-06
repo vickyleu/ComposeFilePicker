@@ -16,6 +16,9 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.refTo
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.value
+import okio.IOException
+import okio.Source
+import okio.Timeout
 import platform.Foundation.NSDate
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileModificationDate
@@ -40,15 +43,16 @@ actual fun FileImpl.resolve(relative: String): FileImpl {
     return this.resolve(relative)
 }
 
-actual inline fun FileImpl.inputStream(): InputStreamImpl {
+actual fun FileImpl.inputStream(): InputStreamImpl {
     return FileInputStream(this)
 }
 
-actual inline fun FileImpl.outputStream(): OutputStreamImpl {
+actual fun FileImpl.outputStream(): OutputStreamImpl {
     return FileOutputStream(this)
 }
 
-actual inline fun FileImpl.uri(): Uri {
+@Suppress("unused")
+actual fun FileImpl.uri(): Uri {
     return this.toUri()
 }
 
@@ -76,6 +80,32 @@ actual abstract class InputStreamImpl : StreamImpl {
     }
 }
 
+@Suppress("unused")
+actual fun InputStreamImpl.source(): Source {
+    return FileSource(this)
+}
+
+actual class FileSource actual constructor(private val inputStream: InputStreamImpl) :
+    Source {
+    @Throws(IOException::class)
+    actual override fun read(sink: okio.Buffer, byteCount: Long): Long {
+        val byteArray = ByteArray(byteCount.toInt())
+        val bytesRead = inputStream.read(byteArray)
+        return if (bytesRead == -1) {
+            -1
+        } else {
+            sink.write(byteArray, 0, bytesRead)
+            bytesRead.toLong()
+        }
+    }
+
+    actual override fun timeout(): Timeout = Timeout.NONE
+
+    @Throws(IOException::class)
+    actual override fun close() {
+        inputStream.close()
+    }
+}
 
 actual abstract class OutputStreamImpl : StreamImpl {
     actual abstract fun write(b: Int)
@@ -208,10 +238,12 @@ inline fun <T : StreamImpl> T.use(block: (T) -> Unit) {
     }
 }
 
+@Suppress("unused")
 actual inline fun InputStreamImpl.useImpl(block: (InputStreamImpl) -> Unit) {
     this.use(block)
 }
 
+@Suppress("unused")
 actual inline fun OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> Unit) {
     this.use(block)
 }
@@ -308,7 +340,7 @@ actual class FileImpl actual constructor(path: String) {
     }
 }
 
-actual inline fun FileImpl.isLocalFile(): Boolean {
+actual fun FileImpl.isLocalFile(): Boolean {
     val values = NSURL(fileURLWithPath = this.getAbsolutePath()).resourceValuesForKeys(
         listOf(NSURLUbiquitousItemIsDownloadedKey), null
     )
