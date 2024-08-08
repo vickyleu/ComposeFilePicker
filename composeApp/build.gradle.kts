@@ -48,6 +48,7 @@ kotlin {
         }
 
         androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
             implementation("androidx.appcompat:appcompat:1.7.0")
         }
     }

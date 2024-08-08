@@ -5,9 +5,8 @@ android-compileSdk = "34"
 android-targetSdk = "34"
 
 kotlin = "2.0.0"
-#compose-plugin = "1.6.11"
 compose-plugin = "1.7.0-alpha02"
-
+androidx-activityCompose = "1.9.1"
 jetpack-compose-bom = "2024.06.00"
 coroutines-bom = "1.8.1"
 coil-bom = "3.0.0-alpha06"
@@ -15,43 +14,22 @@ jvmTarget = "17"
 
 dokka = "1.9.20"
 kotlinxDatetime = "0.6.0"
-navigationCompose = "2.7.6"
-kmm-navigationCompose = "2.8.0-alpha02"
-
-coreKtx = "1.12.0"
-junit = "4.13.2"
-junitVersion = "1.1.5"
-espressoCore = "3.5.1"
-lifecycleRuntimeKtx = "2.7.0"
-activityCompose = "1.8.2"
-composeBom = "2024.01.00"
-appcompat = "1.6.1"
+navigationCompose = "2.7.7"
 
 accompanist = "0.34.0"
-documentfile = "1.0.1"
 
 [libraries]
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-navigation-compose  = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
-kmm-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "kmm-navigationCompose" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "jetpack-compose-bom" }
 coroutines-bom = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-bom", version.ref = "coroutines-bom" }
 coil-bom = { module = "io.coil-kt.coil3:coil-bom", version.ref = "coil-bom" }
 
-
-
 coil-core = { module = "io.coil-kt.coil3:coil"}
 coil-compose = { module = "io.coil-kt.coil3:coil-compose"}
-coil-video = { module = "io.coil-kt.coil3:coil-video"}
-coil-gif = { module = "io.coil-kt.coil3:coil-gif"}
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 
-
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-
-
 
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }

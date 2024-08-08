@@ -80,7 +80,7 @@ fun FilePicker(
         println("onEnterDirectory 返回上一级 popBackStack")
         navController.popBackStack()
     }
-    PermissionGrant()
+    PermissionGrant(state)
     Column(Modifier) {
         val selectedItems = state.currentListState?.findSelectedItems() ?: emptyList()
         val flagCloseSearch = remember { mutableStateOf(false) }
