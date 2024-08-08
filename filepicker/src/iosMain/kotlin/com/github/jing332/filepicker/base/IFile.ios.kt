@@ -255,17 +255,30 @@ actual inline fun OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> Unit) {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-actual class FileImpl actual constructor(path: String) {
+actual class FileImpl {
+    private lateinit var path: String
+
+    private val fileManager = NSFileManager.defaultManager
+    actual fun exists(): Boolean {
+        return fileManager.fileExistsAtPath(path, isDirectory = null)
+    }
+
+    actual constructor(path: String) {
+        this.path = path
+    }
+
+    actual constructor(parent: String, child: String) : this("$parent/$child")
+    actual constructor(parent: FileImpl, child: String) : this(parent.getAbsolutePath(), child)
+
     private val filePath: String = path
     actual fun isDirectory(): Boolean {
         val isDirectory = nativeHeap.alloc<BooleanVar>()
-        val exists =
-            NSFileManager.defaultManager.fileExistsAtPath(filePath, isDirectory = isDirectory.ptr)
+        val exists = fileManager.fileExistsAtPath(filePath, isDirectory = isDirectory.ptr)
         return exists && isDirectory.value
     }
 
     actual fun list(): Array<String>? {
-        return NSFileManager.defaultManager.contentsOfDirectoryAtPath(filePath, error = null)?.let {
+        return fileManager.contentsOfDirectoryAtPath(filePath, error = null)?.let {
             val list = mutableListOf<String>()
             for (i in 0 until it.count()) {
                 val str = (it.get(i) as? String)
@@ -280,7 +293,7 @@ actual class FileImpl actual constructor(path: String) {
 
 
     actual fun lastModified(): Long {
-        return NSFileManager.defaultManager.attributesOfItemAtPath(filePath, error = null)?.let {
+        return fileManager.attributesOfItemAtPath(filePath, error = null)?.let {
             (it[NSFileModificationDate] as? NSDate)?.timeIntervalSince1970?.toLong() ?: 0L
         } ?: 0L
     }
@@ -289,13 +302,13 @@ actual class FileImpl actual constructor(path: String) {
 
         println(
             "filePath:::$filePath  ${
-                NSFileManager.defaultManager.fileExistsAtPath(
+                fileManager.fileExistsAtPath(
                     filePath,
                     isDirectory = null
                 )
             }"
         )
-        val attr = NSFileManager.defaultManager.attributesOfItemAtPath(filePath, error = null)
+        val attr = fileManager.attributesOfItemAtPath(filePath, error = null)
         println("attr:::$attr")
         return attr?.let {
             (it[NSFileSize] as? NSNumber)?.longValue ?: 0L
@@ -309,7 +322,7 @@ actual class FileImpl actual constructor(path: String) {
     }
 
     actual fun mkdir(): Boolean {
-        return NSFileManager.defaultManager.createDirectoryAtPath(
+        return fileManager.createDirectoryAtPath(
             filePath,
             withIntermediateDirectories = false,
             attributes = null,
@@ -318,7 +331,7 @@ actual class FileImpl actual constructor(path: String) {
     }
 
     actual fun createNewFile(): Boolean {
-        return NSFileManager.defaultManager.createFileAtPath(
+        return fileManager.createFileAtPath(
             filePath,
             contents = null,
             attributes = null
@@ -344,6 +357,7 @@ actual class FileImpl actual constructor(path: String) {
     fun toUri(): Uri {
         return NSURL(fileURLWithPath = filePath).toCoilUri()
     }
+
 }
 
 actual fun FileImpl.isLocalFile(): Boolean {

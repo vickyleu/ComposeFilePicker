@@ -64,7 +64,12 @@ expect abstract class OutputStreamImpl {
 expect inline fun InputStreamImpl.useImpl(block: (InputStreamImpl) -> Unit)
 expect inline fun OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> Unit)
 
-expect class FileImpl(path: String) {
+expect class FileImpl{
+
+    constructor(path: String)
+    constructor(parent: String, child: String)
+    constructor(parent: FileImpl, child: String)
+
     fun isDirectory(): Boolean
     fun list(): Array<String>?
     fun lastModified(): Long
@@ -74,6 +79,9 @@ expect class FileImpl(path: String) {
     fun createNewFile(): Boolean
     fun getAbsolutePath(): String
     fun getName(): String
+
+    fun exists(): Boolean
+
 }
 
 expect fun FileImpl.uri(): Uri
