@@ -86,6 +86,10 @@ expect class FileImpl{
 
     fun delete(): Boolean
 
+    fun getParentFile(): FileImpl?
+
+    fun getParent(): String?
+
 }
 
 expect fun FileImpl.uri(): Uri

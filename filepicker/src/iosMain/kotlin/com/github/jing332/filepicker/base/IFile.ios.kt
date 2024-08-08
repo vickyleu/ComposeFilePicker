@@ -274,6 +274,17 @@ actual class FileImpl {
     actual constructor(parent: String, child: String) : this("$parent/$child")
     actual constructor(parent: FileImpl, child: String) : this(parent.getAbsolutePath(), child)
 
+    actual fun getParentFile(): FileImpl? {
+        val parentPath = getParent()
+        return parentPath?.let { FileImpl(it) }
+    }
+
+    actual fun getParent(): String? {
+        val parentPath = path.removeSuffix(getName()).ifEmpty { null }
+        return parentPath
+    }
+
+
     private val filePath: String = path
     actual fun isDirectory(): Boolean {
         val isDirectory = nativeHeap.alloc<BooleanVar>()
@@ -324,6 +335,7 @@ actual class FileImpl {
             FileImpl(path = "$filePath/$it")
         }?.toTypedArray()
     }
+
     actual fun mkdirs(): Boolean {
         return fileManager.createDirectoryAtPath(
             path,
@@ -332,6 +344,7 @@ actual class FileImpl {
             error = null
         )
     }
+
     actual fun mkdir(): Boolean {
         return fileManager.createDirectoryAtPath(
             filePath,
