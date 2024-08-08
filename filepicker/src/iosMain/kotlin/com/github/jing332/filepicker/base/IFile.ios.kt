@@ -3,6 +3,7 @@ package com.github.jing332.filepicker.base
 import coil3.Uri
 import coil3.pathSegments
 import coil3.toUri
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.BooleanVar
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
@@ -20,7 +21,9 @@ import okio.IOException
 import okio.Sink
 import okio.Source
 import okio.Timeout
+import platform.Foundation.NSData
 import platform.Foundation.NSDate
+import platform.Foundation.NSFileHandle
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileModificationDate
 import platform.Foundation.NSFileSize
@@ -32,9 +35,14 @@ import platform.Foundation.NSOutputStream
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLUbiquitousItemIsDownloadedKey
 import platform.Foundation.appendBytes
+import platform.Foundation.closeFile
+import platform.Foundation.create
+import platform.Foundation.fileHandleForReadingAtPath
+import platform.Foundation.fileHandleForWritingAtPath
 import platform.Foundation.getBytes
 import platform.Foundation.inputStreamWithFileAtPath
 import platform.Foundation.outputStreamToFileAtPath
+import platform.Foundation.readDataOfLength
 import platform.Foundation.timeIntervalSince1970
 import platform.darwin.NSInteger
 import platform.posix.uint8_tVar
@@ -412,4 +420,93 @@ actual class ByteArrayOutputStreamImpl actual constructor() : OutputStreamImpl()
 
     actual override fun write(b: Int) {
     }
+}
+
+
+@OptIn(BetaInteropApi::class)
+actual class RandomAccessFileImpl {
+
+    private val file: FileImpl
+    private lateinit var fileReadingHandle: NSFileHandle
+    private lateinit var fileWritingHandle: NSFileHandle
+
+    actual constructor(filePath: String) {
+        file = FileImpl(filePath)
+        fileReadingHandle = NSFileHandle.fileHandleForReadingAtPath(filePath)!!
+        fileWritingHandle = NSFileHandle.fileHandleForWritingAtPath(filePath)!!
+    }
+
+    actual constructor(file: FileImpl) {
+        this.file = file
+        fileReadingHandle = NSFileHandle.fileHandleForReadingAtPath(file.getAbsolutePath())!!
+        fileWritingHandle = NSFileHandle.fileHandleForWritingAtPath(file.getAbsolutePath())!!
+    }
+
+    actual constructor(file: FileImpl, mode: String) {
+        this.file = file
+        when (mode) {
+            "r" -> fileReadingHandle =
+                NSFileHandle.fileHandleForReadingAtPath(file.getAbsolutePath())!!
+
+            "rw" -> {
+                fileReadingHandle =
+                    NSFileHandle.fileHandleForReadingAtPath(file.getAbsolutePath())!!
+                fileWritingHandle =
+                    NSFileHandle.fileHandleForWritingAtPath(file.getAbsolutePath())!!
+            }
+
+            "w" -> fileWritingHandle =
+                NSFileHandle.fileHandleForWritingAtPath(file.getAbsolutePath())!!
+
+            "rws" -> {
+                fileReadingHandle =
+                    NSFileHandle.fileHandleForReadingAtPath(file.getAbsolutePath())!!
+                fileWritingHandle =
+                    NSFileHandle.fileHandleForWritingAtPath(file.getAbsolutePath())!!
+            }
+
+            else -> Unit
+        }
+    }
+
+
+    actual fun writeAtOffset(offset: Long, data: ByteArray) {
+        if (::fileWritingHandle.isInitialized.not()) return
+        fileWritingHandle.seekToOffset(offset.toULong(), null)
+        memScoped {
+            val buffer = data.refTo(0).getPointer(this)
+            fileWritingHandle.writeData(NSData.create(buffer, data.size.toULong()), null)
+        }
+    }
+
+    actual fun readAtOffset(offset: Long, length: Int): ByteArray {
+        if (::fileReadingHandle.isInitialized.not()) return ByteArray(0)
+        fileReadingHandle.seekToOffset(offset.toULong(), null)
+        fileReadingHandle.readDataOfLength(length.toULong()).let {
+            memScoped {
+                val buffer = ByteArray(it.length.toInt())
+                it.getBytes(buffer.refTo(0).getPointer(this), NSMakeRange(0u, it.length))
+                return buffer
+            }
+        }
+    }
+
+    actual fun getFileLength(): Long {
+        if (::fileReadingHandle.isInitialized.not()) return 0
+        return file.length()
+    }
+
+    actual fun close() {
+        if (::fileReadingHandle.isInitialized) {
+            fileReadingHandle.closeFile()
+        }
+        if (::fileWritingHandle.isInitialized) {
+            fileWritingHandle.closeFile()
+        }
+    }
+
+    actual fun toFile(): FileImpl {
+        return file
+    }
+
 }

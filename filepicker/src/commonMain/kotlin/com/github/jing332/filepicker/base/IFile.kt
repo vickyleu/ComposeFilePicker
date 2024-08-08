@@ -92,6 +92,21 @@ expect class FileImpl{
 
 }
 
+
+expect class RandomAccessFileImpl{
+    constructor(filePath: String)
+    constructor(file: FileImpl)
+    constructor(file: FileImpl, mode: String)
+
+    fun writeAtOffset(offset: Long, data: ByteArray)
+    fun readAtOffset(offset: Long, length: Int): ByteArray
+    fun getFileLength(): Long
+    fun close()
+
+    fun toFile(): FileImpl
+}
+
+
 expect fun FileImpl.uri(): Uri
 
 expect fun FileImpl.isLocalFile(): Boolean
