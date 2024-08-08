@@ -82,6 +82,10 @@ expect class FileImpl{
 
     fun exists(): Boolean
 
+    fun mkdirs(): Boolean
+
+    fun delete(): Boolean
+
 }
 
 expect fun FileImpl.uri(): Uri

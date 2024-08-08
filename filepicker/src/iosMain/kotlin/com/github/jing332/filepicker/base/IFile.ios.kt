@@ -263,6 +263,10 @@ actual class FileImpl {
         return fileManager.fileExistsAtPath(path, isDirectory = null)
     }
 
+    actual fun delete(): Boolean {
+        return fileManager.removeItemAtPath(path, error = null)
+    }
+
     actual constructor(path: String) {
         this.path = path
     }
@@ -320,7 +324,14 @@ actual class FileImpl {
             FileImpl(path = "$filePath/$it")
         }?.toTypedArray()
     }
-
+    actual fun mkdirs(): Boolean {
+        return fileManager.createDirectoryAtPath(
+            path,
+            withIntermediateDirectories = true,
+            attributes = null,
+            error = null
+        )
+    }
     actual fun mkdir(): Boolean {
         return fileManager.createDirectoryAtPath(
             filePath,
