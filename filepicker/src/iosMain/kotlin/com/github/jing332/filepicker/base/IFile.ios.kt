@@ -470,12 +470,12 @@ actual class RandomAccessFileImpl {
     }
 
 
-    actual fun writeAtOffset(offset: Long, data: ByteArray) {
+    actual fun writeAtOffset(data: ByteArray,offset: Long, length:Int) {
         if (::fileWritingHandle.isInitialized.not()) return
         fileWritingHandle.seekToOffset(offset.toULong(), null)
         memScoped {
             val buffer = data.refTo(0).getPointer(this)
-            fileWritingHandle.writeData(NSData.create(buffer, data.size.toULong()), null)
+            fileWritingHandle.writeData(NSData.create(buffer, length.toULong()), null)
         }
     }
 

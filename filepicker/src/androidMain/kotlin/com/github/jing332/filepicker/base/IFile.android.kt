@@ -78,9 +78,9 @@ actual class RandomAccessFileImpl {
         randomAccessFile = java.io.RandomAccessFile(file, mode)
     }
 
-    actual fun writeAtOffset(offset: Long, data: ByteArray) {
+    actual fun writeAtOffset(data: ByteArray,offset: Long, length:Int) {
         randomAccessFile.seek(offset)
-        randomAccessFile.write(data)
+        randomAccessFile.write(data,0,length)
     }
 
     actual fun readAtOffset(offset: Long, length: Int): ByteArray {

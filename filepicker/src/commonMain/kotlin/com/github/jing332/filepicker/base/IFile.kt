@@ -98,7 +98,7 @@ expect class RandomAccessFileImpl{
     constructor(file: FileImpl)
     constructor(file: FileImpl, mode: String)
 
-    fun writeAtOffset(offset: Long, data: ByteArray)
+    fun writeAtOffset(data: ByteArray,offset: Long, length:Int)
     fun readAtOffset(offset: Long, length: Int): ByteArray
     fun getFileLength(): Long
     fun close()
