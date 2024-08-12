@@ -99,6 +99,7 @@ fun FileListPage(
                         else item.fileSize.value,
             onCheckedChange = { _ ->
                 state.selector(item)
+                if(item.isDirectory)return@Item
                 scope.launch {
                     onSelect.invoke(item.model)
                 }
@@ -111,6 +112,7 @@ fun FileListPage(
                     onEnter(item.model)
                 else if (item.isCheckable.value) {
                     state.selector(item)
+                    if(item.isDirectory)return@Item
                     scope.launch {
                         onSelect.invoke(item.model)
                     }
@@ -120,6 +122,7 @@ fun FileListPage(
                 if (item.isBackType) onBack()
                 else if (item.isCheckable.value) {
                     state.selector(item)
+                    if(item.isDirectory)return@Item
                     scope.launch {
                         onSelect.invoke(item.model)
                     }
