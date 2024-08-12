@@ -59,3 +59,47 @@ actual fun FileImpl.uri(): Uri {
 actual fun FileImpl.isLocalFile() = true
 
 actual typealias ByteArrayOutputStreamImpl = java.io.ByteArrayOutputStream
+
+actual class RandomAccessFileImpl {
+    private val file: FileImpl
+    private val randomAccessFile: java.io.RandomAccessFile
+    actual constructor(filePath: String) {
+        file = FileImpl(filePath)
+        randomAccessFile = java.io.RandomAccessFile(filePath, "rw")
+    }
+
+    actual constructor(file: FileImpl) {
+        this.file = file
+        randomAccessFile = java.io.RandomAccessFile(file, "rw")
+    }
+
+    actual constructor(file: FileImpl, mode: String) {
+        this.file = file
+        randomAccessFile = java.io.RandomAccessFile(file, mode)
+    }
+
+    actual fun writeAtOffset(data: ByteArray,offset: Long, length:Int) {
+        randomAccessFile.seek(offset)
+        randomAccessFile.write(data,0,length)
+    }
+
+    actual fun readAtOffset(offset: Long, length: Int): ByteArray {
+        randomAccessFile.seek(offset)
+        val buffer = ByteArray(length)
+        randomAccessFile.read(buffer)
+        return buffer
+    }
+
+    actual fun getFileLength(): Long {
+        return randomAccessFile.length()
+    }
+
+    actual fun close() {
+        randomAccessFile.close()
+    }
+
+    actual fun toFile(): FileImpl {
+        return file
+    }
+
+}

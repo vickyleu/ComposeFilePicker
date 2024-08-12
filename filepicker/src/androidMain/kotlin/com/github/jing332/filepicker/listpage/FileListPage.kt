@@ -1,8 +1,11 @@
 package com.github.jing332.filepicker.listpage
 
 import android.view.View
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -16,8 +19,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import com.github.jing332.filepicker.FilePickerConfiguration
 import com.github.jing332.filepicker.ViewType
 import com.github.jing332.filepicker.model.IFileModel
@@ -141,6 +144,11 @@ fun FileListPage(
             itemsIndexed(state.items, key = { _, item -> item.key }) { _, item ->
                 itemContent(item = item)
             }
+            item(span = {
+                GridItemSpan(2)
+            }) {
+                Spacer(modifier = Modifier.height(50.dp))
+            }
         }
     else
         LazyColumn(
@@ -149,6 +157,9 @@ fun FileListPage(
         ) {
             itemsIndexed(state.items, key = { _, item -> item.key }) { _, item ->
                 itemContent(item = item)
+            }
+            item {
+                Spacer(modifier = Modifier.height(50.dp))
             }
         }
 }

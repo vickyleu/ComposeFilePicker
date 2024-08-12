@@ -64,7 +64,12 @@ expect abstract class OutputStreamImpl {
 expect inline fun InputStreamImpl.useImpl(block: (InputStreamImpl) -> Unit)
 expect inline fun OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> Unit)
 
-expect class FileImpl(path: String) {
+expect class FileImpl{
+
+    constructor(path: String)
+    constructor(parent: String, child: String)
+    constructor(parent: FileImpl, child: String)
+
     fun isDirectory(): Boolean
     fun list(): Array<String>?
     fun lastModified(): Long
@@ -74,7 +79,33 @@ expect class FileImpl(path: String) {
     fun createNewFile(): Boolean
     fun getAbsolutePath(): String
     fun getName(): String
+
+    fun exists(): Boolean
+
+    fun mkdirs(): Boolean
+
+    fun delete(): Boolean
+
+    fun getParentFile(): FileImpl?
+
+    fun getParent(): String?
+
 }
+
+
+expect class RandomAccessFileImpl{
+    constructor(filePath: String)
+    constructor(file: FileImpl)
+    constructor(file: FileImpl, mode: String)
+
+    fun writeAtOffset(data: ByteArray,offset: Long, length:Int)
+    fun readAtOffset(offset: Long, length: Int): ByteArray
+    fun getFileLength(): Long
+    fun close()
+
+    fun toFile(): FileImpl
+}
+
 
 expect fun FileImpl.uri(): Uri
 

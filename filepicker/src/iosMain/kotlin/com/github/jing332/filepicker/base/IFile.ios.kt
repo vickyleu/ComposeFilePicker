@@ -3,6 +3,7 @@ package com.github.jing332.filepicker.base
 import coil3.Uri
 import coil3.pathSegments
 import coil3.toUri
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.BooleanVar
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
@@ -20,7 +21,9 @@ import okio.IOException
 import okio.Sink
 import okio.Source
 import okio.Timeout
+import platform.Foundation.NSData
 import platform.Foundation.NSDate
+import platform.Foundation.NSFileHandle
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileModificationDate
 import platform.Foundation.NSFileSize
@@ -32,9 +35,14 @@ import platform.Foundation.NSOutputStream
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLUbiquitousItemIsDownloadedKey
 import platform.Foundation.appendBytes
+import platform.Foundation.closeFile
+import platform.Foundation.create
+import platform.Foundation.fileHandleForReadingAtPath
+import platform.Foundation.fileHandleForWritingAtPath
 import platform.Foundation.getBytes
 import platform.Foundation.inputStreamWithFileAtPath
 import platform.Foundation.outputStreamToFileAtPath
+import platform.Foundation.readDataOfLength
 import platform.Foundation.timeIntervalSince1970
 import platform.darwin.NSInteger
 import platform.posix.uint8_tVar
@@ -255,17 +263,45 @@ actual inline fun OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> Unit) {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-actual class FileImpl actual constructor(path: String) {
+actual class FileImpl {
+    private lateinit var path: String
+
+    private val fileManager = NSFileManager.defaultManager
+    actual fun exists(): Boolean {
+        return fileManager.fileExistsAtPath(path, isDirectory = null)
+    }
+
+    actual fun delete(): Boolean {
+        return fileManager.removeItemAtPath(path, error = null)
+    }
+
+    actual constructor(path: String) {
+        this.path = path
+    }
+
+    actual constructor(parent: String, child: String) : this("$parent/$child")
+    actual constructor(parent: FileImpl, child: String) : this(parent.getAbsolutePath(), child)
+
+    actual fun getParentFile(): FileImpl? {
+        val parentPath = getParent()
+        return parentPath?.let { FileImpl(it) }
+    }
+
+    actual fun getParent(): String? {
+        val parentPath = path.removeSuffix(getName()).ifEmpty { null }
+        return parentPath
+    }
+
+
     private val filePath: String = path
     actual fun isDirectory(): Boolean {
         val isDirectory = nativeHeap.alloc<BooleanVar>()
-        val exists =
-            NSFileManager.defaultManager.fileExistsAtPath(filePath, isDirectory = isDirectory.ptr)
+        val exists = fileManager.fileExistsAtPath(filePath, isDirectory = isDirectory.ptr)
         return exists && isDirectory.value
     }
 
     actual fun list(): Array<String>? {
-        return NSFileManager.defaultManager.contentsOfDirectoryAtPath(filePath, error = null)?.let {
+        return fileManager.contentsOfDirectoryAtPath(filePath, error = null)?.let {
             val list = mutableListOf<String>()
             for (i in 0 until it.count()) {
                 val str = (it.get(i) as? String)
@@ -280,7 +316,7 @@ actual class FileImpl actual constructor(path: String) {
 
 
     actual fun lastModified(): Long {
-        return NSFileManager.defaultManager.attributesOfItemAtPath(filePath, error = null)?.let {
+        return fileManager.attributesOfItemAtPath(filePath, error = null)?.let {
             (it[NSFileModificationDate] as? NSDate)?.timeIntervalSince1970?.toLong() ?: 0L
         } ?: 0L
     }
@@ -289,13 +325,13 @@ actual class FileImpl actual constructor(path: String) {
 
         println(
             "filePath:::$filePath  ${
-                NSFileManager.defaultManager.fileExistsAtPath(
+                fileManager.fileExistsAtPath(
                     filePath,
                     isDirectory = null
                 )
             }"
         )
-        val attr = NSFileManager.defaultManager.attributesOfItemAtPath(filePath, error = null)
+        val attr = fileManager.attributesOfItemAtPath(filePath, error = null)
         println("attr:::$attr")
         return attr?.let {
             (it[NSFileSize] as? NSNumber)?.longValue ?: 0L
@@ -308,8 +344,17 @@ actual class FileImpl actual constructor(path: String) {
         }?.toTypedArray()
     }
 
+    actual fun mkdirs(): Boolean {
+        return fileManager.createDirectoryAtPath(
+            path,
+            withIntermediateDirectories = true,
+            attributes = null,
+            error = null
+        )
+    }
+
     actual fun mkdir(): Boolean {
-        return NSFileManager.defaultManager.createDirectoryAtPath(
+        return fileManager.createDirectoryAtPath(
             filePath,
             withIntermediateDirectories = false,
             attributes = null,
@@ -318,7 +363,7 @@ actual class FileImpl actual constructor(path: String) {
     }
 
     actual fun createNewFile(): Boolean {
-        return NSFileManager.defaultManager.createFileAtPath(
+        return fileManager.createFileAtPath(
             filePath,
             contents = null,
             attributes = null
@@ -344,6 +389,7 @@ actual class FileImpl actual constructor(path: String) {
     fun toUri(): Uri {
         return NSURL(fileURLWithPath = filePath).toCoilUri()
     }
+
 }
 
 actual fun FileImpl.isLocalFile(): Boolean {
@@ -374,4 +420,93 @@ actual class ByteArrayOutputStreamImpl actual constructor() : OutputStreamImpl()
 
     actual override fun write(b: Int) {
     }
+}
+
+
+@OptIn(BetaInteropApi::class)
+actual class RandomAccessFileImpl {
+
+    private val file: FileImpl
+    private lateinit var fileReadingHandle: NSFileHandle
+    private lateinit var fileWritingHandle: NSFileHandle
+
+    actual constructor(filePath: String) {
+        file = FileImpl(filePath)
+        fileReadingHandle = NSFileHandle.fileHandleForReadingAtPath(filePath)!!
+        fileWritingHandle = NSFileHandle.fileHandleForWritingAtPath(filePath)!!
+    }
+
+    actual constructor(file: FileImpl) {
+        this.file = file
+        fileReadingHandle = NSFileHandle.fileHandleForReadingAtPath(file.getAbsolutePath())!!
+        fileWritingHandle = NSFileHandle.fileHandleForWritingAtPath(file.getAbsolutePath())!!
+    }
+
+    actual constructor(file: FileImpl, mode: String) {
+        this.file = file
+        when (mode) {
+            "r" -> fileReadingHandle =
+                NSFileHandle.fileHandleForReadingAtPath(file.getAbsolutePath())!!
+
+            "rw" -> {
+                fileReadingHandle =
+                    NSFileHandle.fileHandleForReadingAtPath(file.getAbsolutePath())!!
+                fileWritingHandle =
+                    NSFileHandle.fileHandleForWritingAtPath(file.getAbsolutePath())!!
+            }
+
+            "w" -> fileWritingHandle =
+                NSFileHandle.fileHandleForWritingAtPath(file.getAbsolutePath())!!
+
+            "rws" -> {
+                fileReadingHandle =
+                    NSFileHandle.fileHandleForReadingAtPath(file.getAbsolutePath())!!
+                fileWritingHandle =
+                    NSFileHandle.fileHandleForWritingAtPath(file.getAbsolutePath())!!
+            }
+
+            else -> Unit
+        }
+    }
+
+
+    actual fun writeAtOffset(data: ByteArray,offset: Long, length:Int) {
+        if (::fileWritingHandle.isInitialized.not()) return
+        fileWritingHandle.seekToOffset(offset.toULong(), null)
+        memScoped {
+            val buffer = data.refTo(0).getPointer(this)
+            fileWritingHandle.writeData(NSData.create(buffer, length.toULong()), null)
+        }
+    }
+
+    actual fun readAtOffset(offset: Long, length: Int): ByteArray {
+        if (::fileReadingHandle.isInitialized.not()) return ByteArray(0)
+        fileReadingHandle.seekToOffset(offset.toULong(), null)
+        fileReadingHandle.readDataOfLength(length.toULong()).let {
+            memScoped {
+                val buffer = ByteArray(it.length.toInt())
+                it.getBytes(buffer.refTo(0).getPointer(this), NSMakeRange(0u, it.length))
+                return buffer
+            }
+        }
+    }
+
+    actual fun getFileLength(): Long {
+        if (::fileReadingHandle.isInitialized.not()) return 0
+        return file.length()
+    }
+
+    actual fun close() {
+        if (::fileReadingHandle.isInitialized) {
+            fileReadingHandle.closeFile()
+        }
+        if (::fileWritingHandle.isInitialized) {
+            fileWritingHandle.closeFile()
+        }
+    }
+
+    actual fun toFile(): FileImpl {
+        return file
+    }
+
 }

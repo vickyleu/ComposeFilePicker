@@ -1,14 +1,9 @@
 package com.github.jing332.filepicker
 
-import androidx.compose.runtime.Composable
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
-
-@Composable
-actual fun PermissionGrant() {
-}
 
 actual class SecurityFromFilePickerException : Exception()
 
