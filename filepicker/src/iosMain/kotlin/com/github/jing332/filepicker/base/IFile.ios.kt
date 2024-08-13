@@ -268,19 +268,25 @@ actual class FileImpl {
 
     private val fileManager = NSFileManager.defaultManager
     actual fun exists(): Boolean {
-        return fileManager.fileExistsAtPath(path, isDirectory = null)
+        return fileManager.fileExistsAtPath(filePath, isDirectory = null)
     }
 
     actual fun delete(): Boolean {
-        return fileManager.removeItemAtPath(path, error = null)
+        return fileManager.removeItemAtPath(filePath, error = null)
     }
 
     actual constructor(path: String) {
         this.path = path
     }
 
-    actual constructor(parent: String, child: String) : this("$parent/$child")
-    actual constructor(parent: FileImpl, child: String) : this(parent.getAbsolutePath(), child)
+    actual constructor(parent: String, child: String) : this(path="$parent/$child"){
+//        this.path = "$parent/$child"
+        println("this.path::${this.path}")
+    }
+    actual constructor(parent: FileImpl, child: String) : this(parent=parent.getAbsolutePath(),child=child){
+//        this.path = "${parent.getAbsolutePath()}/$child"
+        println("this.path::${this.path}")
+    }
 
     actual fun getParentFile(): FileImpl? {
         val parentPath = getParent()
@@ -288,12 +294,15 @@ actual class FileImpl {
     }
 
     actual fun getParent(): String? {
-        val parentPath = path.removeSuffix(getName()).ifEmpty { null }
+        val parentPath = filePath.removeSuffix(getName()).ifEmpty { null }
         return parentPath
     }
 
 
-    private val filePath: String = path
+    private val filePath: String by lazy {
+        if(::path.isInitialized.not())throw RuntimeException("path is not initialized")
+        path
+    }
     actual fun isDirectory(): Boolean {
         val isDirectory = nativeHeap.alloc<BooleanVar>()
         val exists = fileManager.fileExistsAtPath(filePath, isDirectory = isDirectory.ptr)
@@ -322,17 +331,7 @@ actual class FileImpl {
     }
 
     actual fun length(): Long {
-
-        println(
-            "filePath:::$filePath  ${
-                fileManager.fileExistsAtPath(
-                    filePath,
-                    isDirectory = null
-                )
-            }"
-        )
         val attr = fileManager.attributesOfItemAtPath(filePath, error = null)
-        println("attr:::$attr")
         return attr?.let {
             (it[NSFileSize] as? NSNumber)?.longValue ?: 0L
         } ?: 0L
@@ -346,7 +345,7 @@ actual class FileImpl {
 
     actual fun mkdirs(): Boolean {
         return fileManager.createDirectoryAtPath(
-            path,
+            filePath,
             withIntermediateDirectories = true,
             attributes = null,
             error = null
