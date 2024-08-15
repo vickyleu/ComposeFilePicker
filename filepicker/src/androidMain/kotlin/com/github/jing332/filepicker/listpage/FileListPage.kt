@@ -109,7 +109,6 @@ fun FileListPage(
             },
             onClick = {
                 if (item.isBackType) {
-                    println("onEnterDirectory 返回上一级")
                     onBack()
                 } else if (!hasChecked && !item.isChecked.value && item.isDirectory)
                     onEnter(item.model)

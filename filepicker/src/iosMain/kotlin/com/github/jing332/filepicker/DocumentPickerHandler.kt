@@ -22,8 +22,20 @@ import platform.CoreFoundation.CFStringGetCString
 import platform.CoreFoundation.CFStringGetLength
 import platform.CoreFoundation.CFStringGetMaximumSizeForEncoding
 import platform.CoreFoundation.CFStringRef
+import platform.CoreFoundation.CFStringRefVar
 import platform.CoreFoundation.kCFStringEncodingUTF8
+import platform.CoreServices.kUTTypeArchive
+import platform.CoreServices.kUTTypeAudio
+import platform.UIKit.UIModalTransitionStyle
+import platform.CoreServices.kUTTypeData
 import platform.CoreServices.kUTTypeItem
+import platform.CoreServices.kUTTypeMP3
+import platform.CoreServices.kUTTypeMPEG4
+import platform.CoreServices.kUTTypeMPEG4Audio
+import platform.CoreServices.kUTTypePDF
+import platform.CoreServices.kUTTypePlainText
+import platform.CoreServices.kUTTypeRTF
+import platform.CoreServices.kUTTypeVideo
 import platform.Foundation.NSError
 import platform.Foundation.NSFileCoordinator
 import platform.Foundation.NSFileManager
@@ -35,7 +47,35 @@ import platform.Foundation.lastPathComponent
 import platform.UIKit.UIDocumentPickerDelegateProtocol
 import platform.UIKit.UIDocumentPickerMode
 import platform.UIKit.UIDocumentPickerViewController
+import platform.UIKit.UIModalPresentationFullScreen
 import platform.UIKit.UIViewController
+import platform.UIKit.isModalInPresentation
+import platform.UIKit.setModalInPresentation
+import platform.darwin.NSObject
+
+
+val compressionTypes = listOf(
+    "public.zip-archive",       // zip
+    "com.rarlab.rar-archive",   // rar
+    "org.7-zip.7-zip-archive",  // 7z
+//    "com.apple.binhex-archive", // binhex
+    "public.tar-archive",       // tar
+    "org.gnu.gnu-zip-archive",  // gzip
+    "org.gnu.gnu-tar-archive",  // tar.gz
+//    "com.apple.macbinary-archive" // macbinary
+)
+
+val designAndCadFileTypes = listOf(
+    "com.adobe.photoshop-image",       // Photoshop (.psd)
+    "com.bohemiancoding.sketch.drawing", // Sketch (.sketch)
+    "com.autodesk.dwg",                // AutoCAD (.dwg)
+    "com.adobe.illustrator.ai-image",  // Illustrator (.ai)
+    "com.adobe.pdf",                   // PDF (.pdf)
+    "com.corel.coreldraw",             // CorelDRAW (.cdr)
+    "com.adobe.indesign-document",     // InDesign (.indd)
+    "public.eps",                      // EPS (.eps)
+    "org.khronos.collada.digital-asset" // COLLADA (.dae)
+)
 
 @OptIn(BetaInteropApi::class, ExperimentalForeignApi::class)
 @ExportObjCClass
@@ -62,28 +102,33 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
 
     fun pickDocument(callback: (NormalFile) -> Unit) {
         this.callback = callback
-        val documentTypes = listOf(kUTTypeItem).map { UTType -> UTType?.toKString() }
-//        val documentTypes = listOf("jpg", "pdf", "doc")
 
-        // NSURL* documentsDirectory = [fm URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask][0];
-        //    NSURL* destinationPath = [documentsDirectory URLByAppendingPathComponent:fileName];
-//        val documentsDirectory = NSFileManager.defaultManager.URLsForDirectory(
-//            directory = NSDocumentDirectory,
-//            inDomains = NSUserDomainMask
-//        ).firstOrNull() as? NSURL
-//        val destinationPath = documentsDirectory?.URLByAppendingPathComponent("filepicker")?:return kotlin.run {
-//            println("获取文件路径失败")
-//        }
-//        // reason: '-[UIDocumentPickerViewController initWithURL:inMode:] must be called with a URL pointing to an existing file:
-//
-//
-//
-//
-//        val documentPicker = UIDocumentPickerViewController(uRL = destinationPath, inMode = UIDocumentPickerMode.UIDocumentPickerModeExportToService)
+        val documentTypes = listOf(
+            kUTTypePDF,
+            kUTTypeRTF,
+            "public.plain-text",
+//            kUTTypePlainText,
+            kUTTypeVideo,
+            kUTTypeAudio,
+            "com.microsoft.word.doc" /* doc */,
+            "org.openxmlformats.wordprocessingml.document" /* docx */,
+            "com.microsoft.powerpoint.ppt" /* ppt */,
+            "org.openxmlformats.presentationml.presentation" /* pptx */,
+            "com.microsoft.excel.xls" /* xls */,
+            "org.openxmlformats.spreadsheetml.sheet" /* xlsx */,
+//            kUTTypeData, // For doc, docx, ppt, pptx, xls, xlsx
+            *compressionTypes.toTypedArray(), // For compressed files like zip
+            *designAndCadFileTypes.toTypedArray(), // For design files like ps, ai, sketch, dwg, pdf, cdr, indd, eps, dae
+        ).mapNotNull {
+            @Suppress("UNCHECKED_CAST")
+            ((it as? CFStringRef)?.toKString())?:it?.toString()
+        }
         val documentPicker = UIDocumentPickerViewController(
             documentTypes = documentTypes, inMode = UIDocumentPickerMode.UIDocumentPickerModeImport
         )
         documentPicker.delegate = this
+        documentPicker.setModalInPresentation(true)
+        documentPicker.setModalPresentationStyle(UIModalPresentationFullScreen)
         this.presentViewController(documentPicker, animated = true, completion = null)
     }
 
@@ -94,7 +139,7 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
         var newUrl = url
         // Create file URL to temporary folder
         var tempURL = NSURL(fileURLWithPath = NSTemporaryDirectory())
-        // Apend filename (name+extension) to URL
+        // Append filename (name+extension) to URL
         tempURL = tempURL.URLByAppendingPathComponent(url.lastPathComponent!!)!!
         try {
             // If file with same name exists remove it (replace file with new one)

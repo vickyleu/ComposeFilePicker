@@ -18,11 +18,14 @@ kotlin {
         iosArm64(),
         iosSimulatorArm64()
     ).forEach {
-        it.binaries {
-            framework {
-                baseName = "ComposeApp"
+        it.binaries.framework {
+            baseName = "ComposeApp"
+            binaryOption("bundleId", "com.github.jing332.compose_filepicker")
+            if (System.getenv("XCODE_VERSION_MAJOR") == "1500") {
+                linkerOpts += "-ld64"
             }
         }
+
     }
 
     task("testClasses")

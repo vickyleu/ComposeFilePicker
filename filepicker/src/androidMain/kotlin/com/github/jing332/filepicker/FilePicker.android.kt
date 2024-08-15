@@ -70,14 +70,12 @@ fun FilePicker(
                     rootName = rootName,
                     path = it
                 ).also {
-                    println("onEnterDirectory:navBarItems.clear() $it")
                     navBarItems.clear();
                     navBarItems.addAll(it)
                 }
             }
     }
     fun popBack() {
-        println("onEnterDirectory 返回上一级 popBackStack")
         navController.popBackStack()
     }
     PermissionGrant(state)
@@ -141,7 +139,6 @@ fun FilePicker(
                         popBack()
                     },
                     onEnter = { enterFile ->
-                        println("onEnterDirectory:${enterFile.path}")
                         state.navigate(enterFile.path)
                         navBarItems += NavBarItem(
                             name = enterFile.name,
@@ -174,13 +171,19 @@ actual fun startPickerHandler(
                     false
                 } else {
                     if (it.isDirectory.not() && it.name.contains(".")) {
-                        it.name.split(".").lastOrNull()?.let {
-                            val isImage = (it in listOf("jpg", "jpeg",
-                                "png", "gif", "bmp", "webp","thumbnail"))
-                            if (isImage) {
-                                return@FilePickerConfiguration false
-                            }
+                        val extension = it.name.split(".").lastOrNull()?.lowercase() ?: ""
+                        val isImage = extension in listOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "thumbnail")
+                        val isCompressionFile = extension in listOf("zip", "rar", "7z", "tar", "gz", "tgz")
+                        val isDesignFile = extension in listOf("psd", "sketch", "dwg", "ai", "pdf", "cdr", "indd", "eps", "dae")
+                        val isTextFile = extension in listOf("txt", "rtf", "xml", "csv", "log", "md")
+                        val isVideo = extension in listOf("mp4", "avi", "mov", "mkv", "flv", "wmv")
+                        val isAudio = extension in listOf("mp3", "wav", "aac", "flac", "ogg", "m4a")
+                        val isDocument = extension in listOf("doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf")
+                        if(isImage)return@FilePickerConfiguration false
+                        if(isCompressionFile || isDesignFile || isTextFile || isVideo || isAudio || isDocument){
+                            return@FilePickerConfiguration true
                         }
+                        return@FilePickerConfiguration false
                     }
                     true
                 }
