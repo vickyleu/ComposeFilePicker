@@ -3,16 +3,19 @@ package com.github.jing332.filepicker.base
 import coil3.Uri
 import coil3.pathSegments
 import coil3.toUri
+import kotlinx.cinterop.AutofreeScope
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.BooleanVar
-import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.UByteVar
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
-import kotlinx.cinterop.free
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.nativeHeap
+import kotlinx.cinterop.pin
 import kotlinx.cinterop.plus
+import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.refTo
 import kotlinx.cinterop.reinterpret
@@ -45,7 +48,6 @@ import platform.Foundation.outputStreamToFileAtPath
 import platform.Foundation.readDataOfLength
 import platform.Foundation.timeIntervalSince1970
 import platform.darwin.NSInteger
-import platform.posix.uint8_tVar
 
 
 actual fun FileImpl.resolve(relative: String): FileImpl {
@@ -151,39 +153,41 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
     private var skipBuffer = 0L
 
     override fun read(): Int {
-        val buffer = nativeHeap.alloc<uint8_tVar>()
-        println("file: ${file.getAbsolutePath()}  ${file.length()} ${file.lastModified()} ${file.getName()}")
-        val bytesRead = inputStream.read(buffer.ptr, 1024u)
-        try {
-            println("bytesRead: $bytesRead")
+        memScoped {
+            val uByteArray = UByteArray(1024)
+            val bytesRead =
+                inputStream.read(uByteArray.refTo(0).getPointer(this), uByteArray.size.toULong())
             return (if (bytesRead > 0) {
-                buffer.value.toInt()
+                bytesRead.toInt()
             } else -1).apply {
                 if (this <= 0) {
                     isEnded = true
                 }
             }
-        } finally {
-            nativeHeap.free(buffer.ptr)
         }
     }
 
     override fun read(b: ByteArray, off: Int, len: Int): Int {
         memScoped {
-            // 创建一个 UByteArray
-            val ubyteBuffer = UByteArray(len)
-            // 获取指向 UByteArray 的指针
-            val ubuffer = ubyteBuffer.refTo(0).getPointer(this)
-            val bytesRead: NSInteger = inputStream.read(ubuffer, len.toULong())
-            return bytesRead.toInt().apply {
-                if (this <= 0) {
-                    isEnded = true
-                }else{
-                    // 将读取到的内容复制回 ByteArray
-                    for (i in 0 until bytesRead.toInt()) {
-                        b[off + i] = ubyteBuffer[i].toByte()
+            try {
+                // 创建一个 UByteArray
+                val ubyteBuffer = UByteArray(len)
+                // 获取指向 UByteArray 的指针
+                val ubuffer = ubyteBuffer.toCPointer(this)
+                val bytesRead: NSInteger = inputStream.read(ubuffer, len.toULong())
+                return bytesRead.toInt().apply {
+                    if (this <= 0) {
+                        isEnded = true
+                    } else {
+                        // 将读取到的内容复制回 ByteArray
+                        for (i in 0 until bytesRead.toInt()) {
+                            b[off + i] = ubyteBuffer[i].toByte()
+                        }
                     }
                 }
+            }catch (e:Exception){
+                e.printStackTrace()
+                return -1
             }
         }
     }
@@ -191,6 +195,8 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
     override fun read(b: ByteArray): Int {
         val skip = skipBuffer.toInt()
         skipBuffer = 0
+        println("file: ${file.getAbsolutePath()}  ${file.length()} ${file.lastModified()} ${file.getName()}")
+        println("skip: $skip b.size${b.size}")
         return read(b, skip, b.size).apply {
             if (this <= 0) {
                 isEnded = true
@@ -215,6 +221,13 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
     }
 }
 
+fun UByteArray.toCPointer(scope: AutofreeScope): CPointer<UByteVar> {
+    val pinnedArray = this.pin()
+    return pinnedArray.addressOf(0).reinterpret<UByteVar>().also {
+        scope.defer { pinnedArray.unpin() }
+    }
+}
+
 @OptIn(ExperimentalForeignApi::class)
 class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
     private val outputStream = NSOutputStream.outputStreamToFileAtPath(file.getAbsolutePath(), true)
@@ -236,15 +249,20 @@ class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
     override fun write(b: ByteArray, off: Int, len: Int) {
         if (outputStream.hasSpaceAvailable.not()) return
         memScoped {
-            // 创建一个 UByteArray
-            val ubyteBuffer = UByteArray(len-off)
-            // 将 ByteArray 的内容复制到 UByteArray 中
-            for (i in ubyteBuffer.indices) {
-                ubyteBuffer[i] = b[off + i].toUByte()
+            try {
+                // 创建一个 UByteArray
+                val ubyteBuffer = UByteArray(len - off)
+                // 将 ByteArray 的内容复制到 UByteArray 中
+                for (i in ubyteBuffer.indices) {
+                    ubyteBuffer[i] = b[off + i].toUByte()
+                }
+                // 获取指向 UByteArray 的指针
+                val ubuffer = ubyteBuffer.toCPointer(this)
+//            val ubuffer = ubyteBuffer.refTo(0).getPointer(this)
+                val bytesWrite: NSInteger = outputStream.write(ubuffer, (len - off).toULong())
+            }catch (e:Exception){
+                e.printStackTrace()
             }
-            // 获取指向 UByteArray 的指针
-            val ubuffer = ubyteBuffer.refTo(0).getPointer(this)
-            val bytesWrite: NSInteger = outputStream.write(ubuffer, (len-off).toULong())
         }
     }
 
@@ -294,11 +312,15 @@ actual class FileImpl {
         this.path = path
     }
 
-    actual constructor(parent: String, child: String) : this(path="$parent/$child"){
+    actual constructor(parent: String, child: String) : this(path = "$parent/$child") {
 //        this.path = "$parent/$child"
         println("this.path::${this.path}")
     }
-    actual constructor(parent: FileImpl, child: String) : this(parent=parent.getAbsolutePath(),child=child){
+
+    actual constructor(parent: FileImpl, child: String) : this(
+        parent = parent.getAbsolutePath(),
+        child = child
+    ) {
 //        this.path = "${parent.getAbsolutePath()}/$child"
         println("this.path::${this.path}")
     }
@@ -315,9 +337,10 @@ actual class FileImpl {
 
 
     private val filePath: String by lazy {
-        if(::path.isInitialized.not())throw RuntimeException("path is not initialized")
+        if (::path.isInitialized.not()) throw RuntimeException("path is not initialized")
         path
     }
+
     actual fun isDirectory(): Boolean {
         val isDirectory = nativeHeap.alloc<BooleanVar>()
         val exists = fileManager.fileExistsAtPath(filePath, isDirectory = isDirectory.ptr)
@@ -484,7 +507,7 @@ actual class RandomAccessFileImpl {
     }
 
 
-    actual fun writeAtOffset(data: ByteArray,offset: Long, length:Int) {
+    actual fun writeAtOffset(data: ByteArray, offset: Long, length: Int) {
         if (::fileWritingHandle.isInitialized.not()) return
         fileWritingHandle.seekToOffset(offset.toULong(), null)
         memScoped {
