@@ -168,14 +168,21 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
         }
     }
 
-    @Suppress("unchecked_cast")
     override fun read(b: ByteArray, off: Int, len: Int): Int {
         memScoped {
-            val buffer = b.refTo(off).getPointer(this) as CPointer<uint8_tVar>
-            val bytesRead: NSInteger = inputStream.read(buffer, len.toULong())
+            // 创建一个 UByteArray
+            val ubyteBuffer = UByteArray(len)
+            // 获取指向 UByteArray 的指针
+            val ubuffer = ubyteBuffer.refTo(0).getPointer(this)
+            val bytesRead: NSInteger = inputStream.read(ubuffer, len.toULong())
             return bytesRead.toInt().apply {
                 if (this <= 0) {
                     isEnded = true
+                }else{
+                    // 将读取到的内容复制回 ByteArray
+                    for (i in 0 until bytesRead.toInt()) {
+                        b[off + i] = ubyteBuffer[i].toByte()
+                    }
                 }
             }
         }
@@ -203,6 +210,7 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
     }
 
     override fun close() {
+        skipBuffer = 0
         inputStream.close()
     }
 }
@@ -228,8 +236,15 @@ class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
     override fun write(b: ByteArray, off: Int, len: Int) {
         if (outputStream.hasSpaceAvailable.not()) return
         memScoped {
-            val buffer = b.refTo(off).getPointer(this) as CPointer<ByteVar>
-            outputStream.write(buffer.reinterpret(), len.toULong())
+            // 创建一个 UByteArray
+            val ubyteBuffer = UByteArray(len-off)
+            // 将 ByteArray 的内容复制到 UByteArray 中
+            for (i in ubyteBuffer.indices) {
+                ubyteBuffer[i] = b[off + i].toUByte()
+            }
+            // 获取指向 UByteArray 的指针
+            val ubuffer = ubyteBuffer.refTo(0).getPointer(this)
+            val bytesWrite: NSInteger = outputStream.write(ubuffer, (len-off).toULong())
         }
     }
 
