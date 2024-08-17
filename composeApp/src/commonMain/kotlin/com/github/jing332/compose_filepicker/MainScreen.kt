@@ -1,7 +1,9 @@
 package com.github.jing332.compose_filepicker
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Surface
@@ -9,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.github.jing332.compose_filepicker.ui.theme.ComposefilepickerTheme
@@ -17,8 +20,11 @@ import com.github.jing332.filepicker.base.ByteArrayOutputStreamImpl
 @Composable
 fun ComposeApp() {
     ComposefilepickerTheme {
-        Surface {
+        Surface(
+            modifier = Modifier.fillMaxSize()
+        ) {
             FilePickerScreen(
+                modifier = Modifier.fillMaxSize().background(Color.White),
                 onSelectFile = {
                     // 创建一个缓冲区
                     val buffer = ByteArray(1024)

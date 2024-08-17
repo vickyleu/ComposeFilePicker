@@ -127,7 +127,7 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
             documentTypes = documentTypes, inMode = UIDocumentPickerMode.UIDocumentPickerModeImport
         )
         documentPicker.delegate = this
-        documentPicker.setModalInPresentation(true)
+//        documentPicker.setModalInPresentation(true)
         documentPicker.setModalPresentationStyle(UIModalPresentationFullScreen)
         this.presentViewController(documentPicker, animated = true, completion = null)
     }
@@ -135,6 +135,8 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
     override fun documentPicker(
         controller: UIDocumentPickerViewController, didPickDocumentAtURL: NSURL
     ) {
+        println("documentPicker==>>didPickDocumentAtURL")
+
         val url = didPickDocumentAtURL
         var newUrl = url
         // Create file URL to temporary folder
@@ -258,6 +260,17 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
                  }
              }*/
         }
+
+        println("documentPicker==>>didPickDocumentsAtURLs")
+    }
+
+    override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {
+        // Handle cancellation if needed
+        //关掉当前controller
+        controller.dismissViewControllerAnimated(true, null)
+
+        this.dismissViewControllerAnimated(true, null)
+        println("documentPicker==>>documentPickerWasCancelled")
     }
 
     private suspend fun NormalFile.downloadFile() {
@@ -359,9 +372,5 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
         }
     }
 
-    override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {
-        // Handle cancellation if needed
-        //关掉当前controller
-        controller.dismissViewControllerAnimated(true, null)
-    }
+
 }

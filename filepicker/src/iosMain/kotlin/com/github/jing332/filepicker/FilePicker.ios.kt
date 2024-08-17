@@ -6,56 +6,33 @@ import kotlinx.coroutines.CoroutineScope
 import platform.Foundation.NSString
 import platform.Foundation.stringWithFormat
 import platform.UIKit.UIApplication
+import platform.UIKit.UIModalPresentationFullScreen
 import platform.UIKit.UIWindow
 
-actual fun String.formatImpl(vararg args: Any): String {
-    // ios 中字符串格式化
-    return when (args.size) {
-        0 -> NSString.stringWithFormat(this)
-        1 -> NSString.stringWithFormat(this, args[0])
-        2 -> NSString.stringWithFormat(this, args[0], args[1])
-        3 -> NSString.stringWithFormat(this, args[0], args[1], args[2])
-        4 -> NSString.stringWithFormat(this, args[0], args[1], args[2], args[3])
-        5 -> NSString.stringWithFormat(this, args[0], args[1], args[2], args[3], args[4])
-        6 -> NSString.stringWithFormat(this, args[0], args[1], args[2], args[3], args[4], args[5])
-        7 -> NSString.stringWithFormat(
-            this,
-            args[0],
-            args[1],
-            args[2],
-            args[3],
-            args[4],
-            args[5],
-            args[6]
-        )
+internal actual fun String.formatImpl(vararg args: Any): String {
+    var returnString = ""
+    val regEx = "%[\\d|.]*[sdf]|[%]".toRegex()
+    val singleFormats = regEx.findAll(this).map {
+        it.groupValues.first()
+    }.asSequence().toList()
+    val newStrings = this.split(regEx)
+    for (i in 0 until args.count()) {
+        val arg = args[i]
+        returnString += when (arg) {
+            is Double -> {
+                NSString.stringWithFormat(newStrings[i] + singleFormats[i], args[i] as Double)
+            }
 
-        8 -> NSString.stringWithFormat(
-            this,
-            args[0],
-            args[1],
-            args[2],
-            args[3],
-            args[4],
-            args[5],
-            args[6],
-            args[7]
-        )
+            is Int -> {
+                NSString.stringWithFormat(newStrings[i] + singleFormats[i], args[i] as Int)
+            }
 
-        9 -> NSString.stringWithFormat(
-            this,
-            args[0],
-            args[1],
-            args[2],
-            args[3],
-            args[4],
-            args[5],
-            args[6],
-            args[7],
-            args[8]
-        )
-
-        else -> error("Too many arguments.")
+            else -> {
+                NSString.stringWithFormat(newStrings[i] + "%@", args[i])
+            }
+        }
     }
+    return returnString
 }
 
 
@@ -66,6 +43,7 @@ actual fun startPickerHandler(
 ) {
     (UIApplication.sharedApplication.windows.first() as UIWindow).apply {
         val handler = DocumentPickerHandler(scope)
+//        handler.setModalPresentationStyle(UIModalPresentationFullScreen)
         rootViewController?.presentViewController(handler, true) {
             handler.pickDocument {
                 println("DocumentPickerHandler: $it")

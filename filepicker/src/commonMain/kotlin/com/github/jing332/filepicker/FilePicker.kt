@@ -13,4 +13,4 @@ expect fun startPickerHandler(
     callback: ((IFileModel) -> Unit),
 )
 
-expect fun String.formatImpl(vararg args: Any): String
+internal expect fun String.formatImpl(vararg args: Any): String

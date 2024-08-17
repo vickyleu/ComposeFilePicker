@@ -30,7 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.resources.stringResource
 
-actual fun String.formatImpl(vararg args: Any): String {
+internal actual fun String.formatImpl(vararg args: Any): String {
     return this.format(*args)
 }
 
