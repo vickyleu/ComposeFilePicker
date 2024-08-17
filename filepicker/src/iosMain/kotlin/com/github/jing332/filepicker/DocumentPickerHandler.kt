@@ -6,13 +6,14 @@ import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCObjectVar
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.free
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.refTo
 import kotlinx.cinterop.toKString
+import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,18 +23,9 @@ import platform.CoreFoundation.CFStringGetCString
 import platform.CoreFoundation.CFStringGetLength
 import platform.CoreFoundation.CFStringGetMaximumSizeForEncoding
 import platform.CoreFoundation.CFStringRef
-import platform.CoreFoundation.CFStringRefVar
 import platform.CoreFoundation.kCFStringEncodingUTF8
-import platform.CoreServices.kUTTypeArchive
 import platform.CoreServices.kUTTypeAudio
-import platform.UIKit.UIModalTransitionStyle
-import platform.CoreServices.kUTTypeData
-import platform.CoreServices.kUTTypeItem
-import platform.CoreServices.kUTTypeMP3
-import platform.CoreServices.kUTTypeMPEG4
-import platform.CoreServices.kUTTypeMPEG4Audio
 import platform.CoreServices.kUTTypePDF
-import platform.CoreServices.kUTTypePlainText
 import platform.CoreServices.kUTTypeRTF
 import platform.CoreServices.kUTTypeVideo
 import platform.Foundation.NSError
@@ -49,9 +41,6 @@ import platform.UIKit.UIDocumentPickerMode
 import platform.UIKit.UIDocumentPickerViewController
 import platform.UIKit.UIModalPresentationFullScreen
 import platform.UIKit.UIViewController
-import platform.UIKit.isModalInPresentation
-import platform.UIKit.setModalInPresentation
-import platform.darwin.NSObject
 
 
 val compressionTypes = listOf(
@@ -88,13 +77,13 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
         val maxSize = CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8)
         val buffer = ByteArray(maxSize.toInt())
         return memScoped {
-            if (CFStringGetCString(
-                    this@toKString, buffer.refTo(0), maxSize, kCFStringEncodingUTF8
-                )
-            ) {
-                buffer.toKString()
-            } else {
-                throw IllegalArgumentException("Failed to convert CFString to String")
+            buffer.usePinned {
+                val ptr = it.addressOf(0)
+                if (CFStringGetCString(this@toKString, ptr, maxSize, kCFStringEncodingUTF8)) {
+                    buffer.toKString()
+                } else {
+                    throw IllegalArgumentException("Failed to convert CFString to String")
+                }
             }
         }
     }
@@ -110,24 +99,24 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
 //            kUTTypePlainText,
             kUTTypeVideo,
             kUTTypeAudio,
-            "com.microsoft.word.doc" /* doc */,
-            "org.openxmlformats.wordprocessingml.document" /* docx */,
-            "com.microsoft.powerpoint.ppt" /* ppt */,
-            "org.openxmlformats.presentationml.presentation" /* pptx */,
-            "com.microsoft.excel.xls" /* xls */,
-            "org.openxmlformats.spreadsheetml.sheet" /* xlsx */,
+            "com.microsoft.word.doc", /* doc */
+            "org.openxmlformats.wordprocessingml.document", /* docx */
+            "com.microsoft.powerpoint.ppt", /* ppt */
+            "org.openxmlformats.presentationml.presentation", /* pptx */
+            "com.microsoft.excel.xls", /* xls */
+            "org.openxmlformats.spreadsheetml.sheet",
+            /* xlsx */
 //            kUTTypeData, // For doc, docx, ppt, pptx, xls, xlsx
             *compressionTypes.toTypedArray(), // For compressed files like zip
             *designAndCadFileTypes.toTypedArray(), // For design files like ps, ai, sketch, dwg, pdf, cdr, indd, eps, dae
         ).mapNotNull {
             @Suppress("UNCHECKED_CAST")
-            ((it as? CFStringRef)?.toKString())?:it?.toString()
+            ((it as? CFStringRef)?.toKString()) ?: it?.toString()
         }
         val documentPicker = UIDocumentPickerViewController(
             documentTypes = documentTypes, inMode = UIDocumentPickerMode.UIDocumentPickerModeImport
         )
         documentPicker.delegate = this
-//        documentPicker.setModalInPresentation(true)
         documentPicker.setModalPresentationStyle(UIModalPresentationFullScreen)
         this.presentViewController(documentPicker, animated = true, completion = null)
     }
@@ -135,8 +124,6 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
     override fun documentPicker(
         controller: UIDocumentPickerViewController, didPickDocumentAtURL: NSURL
     ) {
-        println("documentPicker==>>didPickDocumentAtURL")
-
         val url = didPickDocumentAtURL
         var newUrl = url
         // Create file URL to temporary folder
@@ -260,17 +247,13 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
                  }
              }*/
         }
-
-        println("documentPicker==>>didPickDocumentsAtURLs")
     }
 
     override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {
         // Handle cancellation if needed
         //关掉当前controller
         controller.dismissViewControllerAnimated(true, null)
-
         this.dismissViewControllerAnimated(true, null)
-        println("documentPicker==>>documentPickerWasCancelled")
     }
 
     private suspend fun NormalFile.downloadFile() {

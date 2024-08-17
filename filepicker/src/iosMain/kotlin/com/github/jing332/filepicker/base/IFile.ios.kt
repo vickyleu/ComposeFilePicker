@@ -3,22 +3,18 @@ package com.github.jing332.filepicker.base
 import coil3.Uri
 import coil3.pathSegments
 import coil3.toUri
-import kotlinx.cinterop.AutofreeScope
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.BooleanVar
-import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.convert
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.nativeHeap
-import kotlinx.cinterop.pin
-import kotlinx.cinterop.plus
-import kotlinx.cinterop.pointed
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.refTo
 import kotlinx.cinterop.reinterpret
+import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import okio.IOException
 import okio.Sink
@@ -46,8 +42,10 @@ import platform.Foundation.getBytes
 import platform.Foundation.inputStreamWithFileAtPath
 import platform.Foundation.outputStreamToFileAtPath
 import platform.Foundation.readDataOfLength
+import platform.Foundation.synchronizeFile
 import platform.Foundation.timeIntervalSince1970
 import platform.darwin.NSInteger
+import platform.darwin.NSUInteger
 
 
 actual fun FileImpl.resolve(relative: String): FileImpl {
@@ -155,37 +153,49 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
     override fun read(): Int {
         memScoped {
             val uByteArray = UByteArray(1024)
-            val bytesRead =
-                inputStream.read(uByteArray.refTo(0).getPointer(this), uByteArray.size.toULong())
-            return (if (bytesRead > 0) {
-                bytesRead.toInt()
-            } else -1).apply {
-                if (this <= 0) {
-                    isEnded = true
+            uByteArray.usePinned {
+                val bytesRead =
+                    inputStream.read(it.addressOf(0), uByteArray.size.toULong())
+                return (if (bytesRead > 0) {
+                    bytesRead.toInt()
+                } else -1).apply {
+                    if (this <= 0) {
+                        isEnded = true
+                    }
                 }
             }
+
+
         }
     }
 
     override fun read(b: ByteArray, off: Int, len: Int): Int {
         memScoped {
+            println("file: ${file.getAbsolutePath()}  ${file.length()} ${file.lastModified()} ${file.getName()}  len:$len off:$off")
             try {
+                if (len - off <= 0) {
+                    return -1
+                }
                 // 创建一个 UByteArray
                 val ubyteBuffer = UByteArray(len)
                 // 获取指向 UByteArray 的指针
-                val ubuffer = ubyteBuffer.toCPointer(this)
-                val bytesRead: NSInteger = inputStream.read(ubuffer, len.toULong())
-                return bytesRead.toInt().apply {
-                    if (this <= 0) {
-                        isEnded = true
-                    } else {
-                        // 将读取到的内容复制回 ByteArray
-                        for (i in 0 until bytesRead.toInt()) {
-                            b[off + i] = ubyteBuffer[i].toByte()
+                // 要获取稳定的C指针,必须在pin固定后操作,否则会导致指针失效
+                ubyteBuffer.usePinned { pinnedArray ->
+                    val ubuffer = pinnedArray.addressOf(0).reinterpret<UByteVar>()
+                    println("pinnedArray:ptr:${ubuffer}")
+                    val bytesRead: NSInteger = inputStream.read(ubuffer, len.toULong())
+                    return bytesRead.toInt().apply {
+                        if (this <= 0) {
+                            isEnded = true
+                        } else {
+                            // 将读取到的内容复制回 ByteArray
+                            for (i in 0 until bytesRead.toInt()) {
+                                b[off + i] = ubyteBuffer[i].toByte()
+                            }
                         }
                     }
                 }
-            }catch (e:Exception){
+            } catch (e: Exception) {
                 e.printStackTrace()
                 return -1
             }
@@ -221,10 +231,16 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
     }
 }
 
-fun UByteArray.toCPointer(scope: AutofreeScope): CPointer<UByteVar> {
-    val pinnedArray = this.pin()
-    return pinnedArray.addressOf(0).reinterpret<UByteVar>().also {
-        scope.defer { pinnedArray.unpin() }
+@OptIn(BetaInteropApi::class)
+@Suppress("unused")
+fun ByteArray.toNSData(): NSData = memScoped {
+    if (this@toNSData.isEmpty()) {
+        NSData()
+    } else {
+        this@toNSData.usePinned {
+            val size = this@toNSData.size.toULong().convert<NSUInteger>()
+            NSData.create(bytes = it.addressOf(0), length = size)
+        }
     }
 }
 
@@ -249,6 +265,9 @@ class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
     override fun write(b: ByteArray, off: Int, len: Int) {
         if (outputStream.hasSpaceAvailable.not()) return
         memScoped {
+            if (len - off <= 0) {
+                return
+            }
             try {
                 // 创建一个 UByteArray
                 val ubyteBuffer = UByteArray(len - off)
@@ -256,11 +275,14 @@ class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
                 for (i in ubyteBuffer.indices) {
                     ubyteBuffer[i] = b[off + i].toUByte()
                 }
-                // 获取指向 UByteArray 的指针
-                val ubuffer = ubyteBuffer.toCPointer(this)
-//            val ubuffer = ubyteBuffer.refTo(0).getPointer(this)
-                val bytesWrite: NSInteger = outputStream.write(ubuffer, (len - off).toULong())
-            }catch (e:Exception){
+                // 获取指向 UByteArray 的固定指针,这样可以保证指针不会失效
+                ubyteBuffer.usePinned { pinnedArray ->
+                    // 获取指向 UByteArray 的指针
+                    val ubuffer = pinnedArray.addressOf(0).reinterpret<UByteVar>()
+                    println("pinnedArray:ptr:${ubuffer}")
+                    val bytesWrite: NSInteger = outputStream.write(ubuffer, (len - off).toULong())
+                }
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
@@ -442,16 +464,22 @@ actual class ByteArrayOutputStreamImpl actual constructor() : OutputStreamImpl()
     actual fun toByteArray(): ByteArray {
         val buffer = ByteArray(nsDate.length.toInt())
         memScoped {
-            nsDate.getBytes(buffer.refTo(0).getPointer(this), NSMakeRange(0u, nsDate.length))
-            val byteArray = buffer.copyOf(nsDate.length.toInt())
-            return byteArray
+            buffer.usePinned { pinnedArray ->
+                val ptr = pinnedArray.addressOf(0)
+                nsDate.getBytes(ptr, NSMakeRange(0u, nsDate.length))
+                val byteArray = buffer.copyOf(nsDate.length.toInt())
+                return byteArray
+            }
         }
     }
 
     override fun write(b: ByteArray, off: Int, len: Int) {
         memScoped {
-            val pointer = b.refTo(0).getPointer(this) + off
-            nsDate.appendBytes(pointer, len.toULong())
+            b.usePinned { pinnedArray ->
+                val ptr = pinnedArray.addressOf(off)
+                nsDate.appendBytes(ptr, len.toULong())
+            }
+//            val pointer = b.refTo(0).getPointer(this) + off
         }
     }
 
@@ -461,6 +489,7 @@ actual class ByteArrayOutputStreamImpl actual constructor() : OutputStreamImpl()
 
 
 @OptIn(BetaInteropApi::class)
+@Suppress("unused")
 actual class RandomAccessFileImpl {
 
     private val file: FileImpl
@@ -509,10 +538,18 @@ actual class RandomAccessFileImpl {
 
     actual fun writeAtOffset(data: ByteArray, offset: Long, length: Int) {
         if (::fileWritingHandle.isInitialized.not()) return
+        if(data.size < length){
+           return
+        }
         fileWritingHandle.seekToOffset(offset.toULong(), null)
         memScoped {
-            val buffer = data.refTo(0).getPointer(this)
-            fileWritingHandle.writeData(NSData.create(buffer, length.toULong()), null)
+            data.usePinned {
+                val ptr = it.addressOf(0)
+                fileWritingHandle.writeData(NSData.create(ptr, length.toULong()), null)
+
+            }
+//            val buffer = data.refTo(0).getPointer(this)
+//            fileWritingHandle.writeData(NSData.create(buffer, length.toULong()), null)
         }
     }
 
@@ -520,16 +557,22 @@ actual class RandomAccessFileImpl {
         if (::fileReadingHandle.isInitialized.not()) return ByteArray(0)
         fileReadingHandle.seekToOffset(offset.toULong(), null)
         fileReadingHandle.readDataOfLength(length.toULong()).let {
+            val data = it
+            if(data.length.toInt()<=0){
+                return ByteArray(0)
+            }
             memScoped {
                 val buffer = ByteArray(it.length.toInt())
-                it.getBytes(buffer.refTo(0).getPointer(this), NSMakeRange(0u, it.length))
-                return buffer
+                buffer.usePinned {
+                    val ptr = it.addressOf(0)
+                    data.getBytes(ptr, NSMakeRange(0u, data.length))
+                    return buffer
+                }
             }
         }
     }
 
     actual fun getFileLength(): Long {
-        if (::fileReadingHandle.isInitialized.not()) return 0
         return file.length()
     }
 
@@ -538,6 +581,7 @@ actual class RandomAccessFileImpl {
             fileReadingHandle.closeFile()
         }
         if (::fileWritingHandle.isInitialized) {
+            fileWritingHandle.synchronizeFile()
             fileWritingHandle.closeFile()
         }
     }
