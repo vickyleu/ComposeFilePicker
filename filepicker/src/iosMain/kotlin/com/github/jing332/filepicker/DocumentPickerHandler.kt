@@ -236,6 +236,13 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
                 println("是本地文件")
                 //关掉当前controller
                 controller.dismissViewControllerAnimated(true, null)
+                scope.launch {
+                    withContext(Dispatchers.Main) {
+                        this@DocumentPickerHandler.dismissViewControllerAnimated(
+                            true, null
+                        )
+                    }
+                }
                 callback?.invoke(file)
             }
             /* withContext(Dispatchers.IO) {
