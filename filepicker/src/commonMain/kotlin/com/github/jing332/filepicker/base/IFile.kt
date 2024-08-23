@@ -106,6 +106,8 @@ expect class RandomAccessFileImpl{
     fun toFile(): FileImpl
 }
 
+expect fun RandomAccessFileImpl.sync()
+
 
 expect fun FileImpl.uri(): Uri
 

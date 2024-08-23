@@ -3,8 +3,12 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
+//    id(libs.plugins.kotlin.multiplatform.get().pluginId)
+//    id(libs.plugins.android.library.get().pluginId)
+
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.compose.compiler)
 }
@@ -70,6 +74,12 @@ kotlin {
         iosMain.get().apply {
         }
     }
+}
+
+compose.resources {
+    publicResClass = false
+    packageOfResClass = "compose_filepicker.filepicker.generated.resources"
+    generateResClass = always
 }
 
 android {

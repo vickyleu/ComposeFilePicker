@@ -7,6 +7,7 @@ import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.BooleanVar
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UByteVar
+import kotlinx.cinterop.UIntVar
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.convert
@@ -47,6 +48,8 @@ import platform.Foundation.synchronizeFile
 import platform.Foundation.timeIntervalSince1970
 import platform.darwin.NSInteger
 import platform.darwin.NSUInteger
+import platform.zlib.uLongVar
+import platform.zlib.uLongfVar
 
 
 actual fun FileImpl.resolve(relative: String): FileImpl {
@@ -546,8 +549,12 @@ actual class RandomAccessFileImpl {
         memScoped {
             data.usePinned {
                 val ptr = it.addressOf(0)
+                val ulong = nativeHeap.alloc<uLongVar>()
+                fileWritingHandle.getOffset(ulong.ptr,null)
+                val pos = ulong.value.toInt()
+                nativeHeap.free(ulong.ptr)
                 fileWritingHandle.writeData(NSData.create(ptr, length.toULong()), null)
-                fileWritingHandle.synchronizeFile()
+//                fileWritingHandle.synchronizeFile() // 不能调用,unknown error
             }
 //            val buffer = data.refTo(0).getPointer(this)
 //            fileWritingHandle.writeData(NSData.create(buffer, length.toULong()), null)
@@ -576,8 +583,10 @@ actual class RandomAccessFileImpl {
     actual fun getFileLength(): Long {
         return file.length()
     }
+    private var isClosed = false
 
     actual fun close() {
+        if(isClosed)return
         if (::fileReadingHandle.isInitialized) {
             fileReadingHandle.closeFile()
         }
@@ -585,10 +594,23 @@ actual class RandomAccessFileImpl {
             fileWritingHandle.synchronizeFile()
             fileWritingHandle.closeFile()
         }
+        isClosed=true
     }
 
     actual fun toFile(): FileImpl {
         return file
     }
 
+    fun syncInternal() {
+        if(isClosed)return
+        if (::fileWritingHandle.isInitialized) {
+            fileWritingHandle.synchronizeFile()
+        }
+    }
+
+}
+
+
+actual fun RandomAccessFileImpl.sync() {
+    syncInternal()
 }

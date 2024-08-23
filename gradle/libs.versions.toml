@@ -17,7 +17,7 @@ kotlinxDatetime = "0.6.0"
 navigationCompose = "2.7.7"
 
 accompanist = "0.34.0"
-
+ktor-bom = "3.0.0-wasm2"
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-navigation-compose  = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
@@ -30,6 +30,29 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose"}
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
+
+
+
+
+ktor-bom = { module = "io.ktor:ktor-bom", version.ref = "ktor-bom" }
+ktor-http = { group = "io.ktor", name = "ktor-http" }
+ktor-client-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation" }
+ktor-client-encoding = { group = "io.ktor", name = "ktor-client-encoding" }
+ktor-client-websocket = { group = "io.ktor", name = "ktor-client-websockets" }
+ktor-client-resource = { group = "io.ktor", name = "ktor-client-resources" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp" }
+ktor-client-darwin = { group = "io.ktor", name = "ktor-client-darwin" }
+ktor-client-java = { module = "io.ktor:ktor-client-java" }
+ktor-client-js = { module = "io.ktor:ktor-client-js" }
+
+
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core" }
+ktor-client-json = { group = "io.ktor", name = "ktor-client-json" }
+ktor-client-serialization = { group = "io.ktor", name = "ktor-client-serialization" }
+ktor-client-serialization-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging" }
+ktor-client-android = { group = "io.ktor", name = "ktor-client-android" }
+
 
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }

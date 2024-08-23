@@ -21,12 +21,12 @@ actual fun InputStreamImpl.source(): Source {
 }
 
 @Suppress("unused")
-actual fun FileImpl.sink(): Sink{
+actual fun FileImpl.sink(): Sink {
     return this.sink(append = false)
 }
 
 
-actual  class FileSource actual constructor(inputStream: InputStreamImpl) :
+actual class FileSource actual constructor(inputStream: InputStreamImpl) :
     Source by inputStream.source()
 
 @Suppress("unused")
@@ -59,10 +59,12 @@ actual fun FileImpl.uri(): Uri {
 actual fun FileImpl.isLocalFile() = true
 
 actual typealias ByteArrayOutputStreamImpl = java.io.ByteArrayOutputStream
+
 @Suppress("unused")
 actual class RandomAccessFileImpl {
     private val file: FileImpl
     private val randomAccessFile: java.io.RandomAccessFile
+
     actual constructor(filePath: String) {
         file = FileImpl(filePath)
         randomAccessFile = java.io.RandomAccessFile(filePath, "rw")
@@ -78,9 +80,9 @@ actual class RandomAccessFileImpl {
         randomAccessFile = java.io.RandomAccessFile(file, mode)
     }
 
-    actual fun writeAtOffset(data: ByteArray,offset: Long, length:Int) {
+    actual fun writeAtOffset(data: ByteArray, offset: Long, length: Int) {
         randomAccessFile.seek(offset)
-        randomAccessFile.write(data,0,length)
+        randomAccessFile.write(data, 0, length)
     }
 
     actual fun readAtOffset(offset: Long, length: Int): ByteArray {
@@ -95,11 +97,24 @@ actual class RandomAccessFileImpl {
     }
 
     actual fun close() {
+        if(isClosed)return
         randomAccessFile.close()
+        isClosed=true
     }
 
     actual fun toFile(): FileImpl {
         return file
     }
 
+    private var isClosed = false
+
+    fun syncInternal() {
+        if(isClosed)return
+        randomAccessFile.fd.sync()
+    }
+
+}
+
+actual fun RandomAccessFileImpl.sync() {
+    syncInternal()
 }

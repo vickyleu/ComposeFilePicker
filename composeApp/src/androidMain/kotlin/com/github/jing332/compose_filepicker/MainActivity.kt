@@ -5,6 +5,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.CompositionLocalProvider
+import kotlinx.coroutines.MainScope
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -19,8 +21,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val impl = StoragePermissionUtil(this, lifecycle, MainScope())
+        val launcher = StorageLauncher(this, lifecycle, MainScope())
         setContent {
-            ComposeApp()
+            CompositionLocalProvider(LocalStoragePermission provides impl) {
+                CompositionLocalProvider(LocalStorageLauncher provides launcher) {
+                    ComposeApp()
+                }
+            }
         }
     }
 }
