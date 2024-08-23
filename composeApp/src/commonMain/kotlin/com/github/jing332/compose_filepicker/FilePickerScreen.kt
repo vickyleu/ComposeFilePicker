@@ -27,9 +27,11 @@ internal fun FilePickerScreen(
 
     Column(modifier) {
         val scope = rememberCoroutineScope()
-        startPickerHandler(scope) {
+        startPickerHandler(scope, close = {
+            println("关闭")
+        }, callback = {
             onSelectFile.invoke(it)
-        }
+        })
         Box{
             Text("FilePickerScreen",fontSize = 20.sp,color = Color.Red)
         }

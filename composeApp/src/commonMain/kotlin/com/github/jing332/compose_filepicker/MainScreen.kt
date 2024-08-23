@@ -155,7 +155,7 @@ fun ComposeApp() {
         Surface(
             modifier = Modifier.fillMaxSize()
         ) {
-            if (true) {
+            if (false) {
                 val toaster = rememberToasterState()
                 val progressiveLoading by remember { mutableStateOf(ProgressState()) }
                 val client = remember {

@@ -40,6 +40,7 @@ import platform.UIKit.UIDocumentPickerMode
 import platform.UIKit.UIDocumentPickerViewController
 import platform.UIKit.UIModalPresentationFullScreen
 import platform.UIKit.UIViewController
+import platform.darwin.NSObject
 
 
 val compressionTypes = listOf(
@@ -67,9 +68,8 @@ val designAndCadFileTypes = listOf(
 
 @OptIn(BetaInteropApi::class, ExperimentalForeignApi::class)
 @ExportObjCClass
-class DocumentPickerHandler(private val scope: CoroutineScope) :
-    UIViewController(nibName = null, bundle = null), UIDocumentPickerDelegateProtocol {
-    private var callback: ((NormalFile) -> Unit)? = null
+class DocumentPickerHandler(private val scope: CoroutineScope) :NSObject(), UIDocumentPickerDelegateProtocol {
+    private lateinit var callback: ((NormalFile?) -> Unit)
 
     private fun CFStringRef.toKString(): String {
         val length = CFStringGetLength(this)
@@ -88,9 +88,8 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
     }
 
 
-    fun pickDocument(callback: (NormalFile) -> Unit) {
+    fun pickDocument(controller: UIViewController,callback: (NormalFile?) -> Unit) {
         this.callback = callback
-
         val documentTypes = listOf(
             kUTTypePDF,
             kUTTypeRTF,
@@ -117,7 +116,7 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
         )
         documentPicker.delegate = this
         documentPicker.setModalPresentationStyle(UIModalPresentationFullScreen)
-        this.presentViewController(documentPicker, animated = true, completion = null)
+        controller.presentModalViewController(documentPicker, animated = true)
     }
 
     override fun documentPicker(
@@ -149,7 +148,7 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
             withContext(Dispatchers.Main) {
                 //关掉当前controller
                 controller.dismissViewControllerAnimated(true, null)
-                callback?.invoke(file)
+                callback.invoke(file)
             }
             /*withContext(Dispatchers.IO) {
                 if (file.isLocalFile.not()) {
@@ -235,14 +234,7 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
                 println("是本地文件")
                 //关掉当前controller
                 controller.dismissViewControllerAnimated(true, null)
-                scope.launch {
-                    withContext(Dispatchers.Main) {
-                        this@DocumentPickerHandler.dismissViewControllerAnimated(
-                            true, null
-                        )
-                    }
-                }
-                callback?.invoke(file)
+                callback.invoke(file)
             }
             /* withContext(Dispatchers.IO) {
                  if (file.isLocalFile.not()) {
@@ -256,10 +248,9 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
     }
 
     override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {
-        // Handle cancellation if needed
         //关掉当前controller
         controller.dismissViewControllerAnimated(true, null)
-        this.dismissViewControllerAnimated(true, null)
+        callback.invoke(null)
     }
 
     private suspend fun NormalFile.downloadFile() {
@@ -286,8 +277,7 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
             if (NSFileManager.defaultManager.fileExistsAtPath(this.path, isDirectory = null)) {
                 println("文件已经存在磁盘上了")
                 withContext(Dispatchers.Main) {
-                    this@DocumentPickerHandler.dismissViewControllerAnimated(true, null)
-                    this@DocumentPickerHandler.callback?.invoke(this@downloadICloudFileIfNeeded)
+                    this@DocumentPickerHandler.callback.invoke(this@downloadICloudFileIfNeeded)
                 }
                 return originUrl
             } else {
@@ -306,13 +296,6 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
                         val fileManager = NSFileManager.defaultManager
                         val exists = fileManager.fileExistsAtPath(url.path!!, isDirectory = null)
                         if (exists) {
-                            scope.launch {
-                                withContext(Dispatchers.Main) {
-                                    this@DocumentPickerHandler.dismissViewControllerAnimated(
-                                        true, null
-                                    )
-                                }
-                            }
                             isDownloading = false
                         } else {
                             println("开始下载文件 $url")
@@ -320,24 +303,17 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
                             fileManager.startDownloadingUbiquitousItemAtURL(url, errorDownload.ptr)
                             if (errorDownload.value != null) {
                                 println("下载文件失败 ${errorDownload.value?.localizedDescription}")
-                                scope.launch {
-                                    withContext(Dispatchers.Main) {
-                                        this@DocumentPickerHandler.dismissViewControllerAnimated(
-                                            true, null
-                                        )
-                                    }
-                                }
                                 isDownloading = false
+                                this@DocumentPickerHandler.callback.invoke(null)
+                                return@coordinateReadingItemAtURL
                             }
                         }
                     }
                 }
                 if (error.value != null) {
                     println("下载文件失败 ${error.value?.localizedDescription}")
-                    withContext(Dispatchers.Main) {
-                        this@DocumentPickerHandler.dismissViewControllerAnimated(true, null)
-                    }
                     isDownloading = false
+                    this@DocumentPickerHandler.callback.invoke(null)
                     return null
                 }
                 // 等待文件下载完成
@@ -348,8 +324,7 @@ class DocumentPickerHandler(private val scope: CoroutineScope) :
                 if (this.isLocalFile) {
                     println("文件下载完成 ${this.path}")
                     withContext(Dispatchers.Main) {
-                        this@DocumentPickerHandler.dismissViewControllerAnimated(true, null)
-                        this@DocumentPickerHandler.callback?.invoke(this@downloadICloudFileIfNeeded)
+                        this@DocumentPickerHandler.callback.invoke(this@downloadICloudFileIfNeeded)
                     }
                     return originUrl
                 } else {

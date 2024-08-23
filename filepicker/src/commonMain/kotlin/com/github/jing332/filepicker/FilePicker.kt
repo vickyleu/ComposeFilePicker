@@ -10,7 +10,7 @@ private const val TAG = "FilePicker"
 @Composable
 expect fun startPickerHandler(
     scope: CoroutineScope,
-    callback: ((IFileModel) -> Unit),
+    callback: ((IFileModel) -> Unit),    close:()->Unit
 )
 
 internal expect fun String.formatImpl(vararg args: Any): String

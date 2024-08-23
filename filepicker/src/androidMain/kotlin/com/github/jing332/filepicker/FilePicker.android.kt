@@ -158,7 +158,7 @@ fun FilePicker(
 @Composable
 actual fun startPickerHandler(
     scope: CoroutineScope,
-    callback: ((IFileModel) -> Unit),
+    callback: ((IFileModel) -> Unit), close: () -> Unit
 ) {
     val context = LocalPlatformContext.current
     FilePicker(
@@ -172,15 +172,36 @@ actual fun startPickerHandler(
                 } else {
                     if (it.isDirectory.not() && it.name.contains(".")) {
                         val extension = it.name.split(".").lastOrNull()?.lowercase() ?: ""
-                        val isImage = extension in listOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "thumbnail")
-                        val isCompressionFile = extension in listOf("zip", "rar", "7z", "tar", "gz", "tgz")
-                        val isDesignFile = extension in listOf("psd", "sketch", "dwg", "ai", "pdf", "cdr", "indd", "eps", "dae")
-                        val isTextFile = extension in listOf("txt", "rtf", "xml", "csv", "log", "md")
+                        val isImage = extension in listOf(
+                            "jpg",
+                            "jpeg",
+                            "png",
+                            "gif",
+                            "bmp",
+                            "webp",
+                            "thumbnail"
+                        )
+                        val isCompressionFile =
+                            extension in listOf("zip", "rar", "7z", "tar", "gz", "tgz")
+                        val isDesignFile = extension in listOf(
+                            "psd",
+                            "sketch",
+                            "dwg",
+                            "ai",
+                            "pdf",
+                            "cdr",
+                            "indd",
+                            "eps",
+                            "dae"
+                        )
+                        val isTextFile =
+                            extension in listOf("txt", "rtf", "xml", "csv", "log", "md")
                         val isVideo = extension in listOf("mp4", "avi", "mov", "mkv", "flv", "wmv")
                         val isAudio = extension in listOf("mp3", "wav", "aac", "flac", "ogg", "m4a")
-                        val isDocument = extension in listOf("doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf")
-                        if(isImage)return@FilePickerConfiguration false
-                        if(isCompressionFile || isDesignFile || isTextFile || isVideo || isAudio || isDocument){
+                        val isDocument =
+                            extension in listOf("doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf")
+                        if (isImage) return@FilePickerConfiguration false
+                        if (isCompressionFile || isDesignFile || isTextFile || isVideo || isAudio || isDocument) {
                             return@FilePickerConfiguration true
                         }
                         return@FilePickerConfiguration false
@@ -202,6 +223,7 @@ actual fun startPickerHandler(
             }
         ),
         onSelectFile = {
+            close.invoke()
             callback.invoke(it)
         }
     )

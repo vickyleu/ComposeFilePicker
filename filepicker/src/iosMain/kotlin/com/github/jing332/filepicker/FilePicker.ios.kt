@@ -1,12 +1,18 @@
 package com.github.jing332.filepicker
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import com.github.jing332.filepicker.model.IFileModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import platform.Foundation.NSString
 import platform.Foundation.stringWithFormat
 import platform.UIKit.UIApplication
-import platform.UIKit.UIModalPresentationFullScreen
+import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 
 internal actual fun String.formatImpl(vararg args: Any): String {
@@ -40,15 +46,32 @@ internal actual fun String.formatImpl(vararg args: Any): String {
 actual fun startPickerHandler(
     scope: CoroutineScope,
     callback: ((IFileModel) -> Unit),
+    close: () -> Unit
 ) {
-    (UIApplication.sharedApplication.windows.first() as UIWindow).apply {
-        val handler = DocumentPickerHandler(scope)
-//        handler.setModalPresentationStyle(UIModalPresentationFullScreen)
-        rootViewController?.presentViewController(handler, true) {
-            handler.pickDocument {
-                println("DocumentPickerHandler: $it")
-                callback.invoke(it)
+    val controller = remember { mutableStateOf<UIViewController?>(null) }
+    LaunchedEffect(Unit) {
+        (UIApplication.sharedApplication.windows.first() as UIWindow).apply {
+            rootViewController?.apply {
+                controller.value = this
             }
         }
     }
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { controller.value }
+            .distinctUntilChanged()
+            .filterNotNull()
+            .collect {
+                val handler = DocumentPickerHandler(scope)
+                handler.pickDocument(it) {
+                    println("DocumentPickerHandler: $it")
+                    close.invoke()
+                    if (it != null) {
+                        callback.invoke(it)
+                    }
+                    controller.value = null
+                }
+            }
+    }
+
 }
