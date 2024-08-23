@@ -59,7 +59,7 @@ actual fun FileImpl.uri(): Uri {
 actual fun FileImpl.isLocalFile() = true
 
 actual typealias ByteArrayOutputStreamImpl = java.io.ByteArrayOutputStream
-
+@Suppress("unused")
 actual class RandomAccessFileImpl {
     private val file: FileImpl
     private val randomAccessFile: java.io.RandomAccessFile

@@ -10,6 +10,7 @@ import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.convert
+import kotlinx.cinterop.free
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
@@ -546,7 +547,7 @@ actual class RandomAccessFileImpl {
             data.usePinned {
                 val ptr = it.addressOf(0)
                 fileWritingHandle.writeData(NSData.create(ptr, length.toULong()), null)
-
+                fileWritingHandle.synchronizeFile()
             }
 //            val buffer = data.refTo(0).getPointer(this)
 //            fileWritingHandle.writeData(NSData.create(buffer, length.toULong()), null)
