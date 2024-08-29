@@ -65,9 +65,10 @@ actual fun startPickerHandler(
                 val handler = DocumentPickerHandler(scope)
                 handler.pickDocument(it) {
                     println("DocumentPickerHandler: $it")
-                    close.invoke()
                     if (it != null) {
                         callback.invoke(it)
+                    }else{
+                        close.invoke()
                     }
                     controller.value = null
                 }

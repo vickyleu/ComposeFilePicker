@@ -42,6 +42,7 @@ fun navControllerSetup(navController: NavHostController) {
 fun FilePicker(
     state: FilePickerState = rememberFilePickerState(),
     config: FilePickerConfiguration = remember { FilePickerConfiguration() },
+    close: () -> Unit={},
     onSelectFile: ((IFileModel) -> Unit)? = null,
 ) {
     val rootPath = state.rootPath
@@ -124,8 +125,11 @@ fun FilePicker(
                     state.currentPath = path
 
                 }
-                BackHandler(path != rootPath) {
-                    popBack()
+                BackHandler(true) {
+                    if(path != rootPath){
+                        popBack()
+                    }else {close.invoke()}
+
                 }
 
                 val file = FileImpl(path)
@@ -222,8 +226,8 @@ actual fun startPickerHandler(
                 }
             }
         ),
+        close=close,
         onSelectFile = {
-            close.invoke()
             callback.invoke(it)
         }
     )

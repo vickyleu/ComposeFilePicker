@@ -41,7 +41,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform).apply(false)
 
 
-    alias(libs.plugins.jetbrains.compose).apply(false)
+//    alias(libs.plugins.jetbrains.compose).apply(false)
     alias(libs.plugins.compose.compiler).apply(false)
     alias(libs.plugins.dokka)
     id("maven-publish")
@@ -88,6 +88,7 @@ buildscript {
     dependencies {
         val dokkaVersion = libs.versions.dokka.get()
         classpath("org.jetbrains.dokka:dokka-base:$dokkaVersion")
+        classpath("org.jetbrains.compose:compose-gradle-plugin:${libs.versions.compose.plugin.get()}")
     }
 }
 
