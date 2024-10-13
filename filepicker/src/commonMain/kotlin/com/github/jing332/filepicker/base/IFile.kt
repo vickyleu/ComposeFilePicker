@@ -16,6 +16,38 @@ expect abstract class InputStreamImpl {
     fun close()
 }
 
+expect abstract class ReaderImpl
+expect abstract class CharsetImpl
+
+expect fun CharsetImpl.forName(charsetName: String): CharsetImpl
+@Suppress("unused")
+expect final class StandardCharsetsImpl {
+    companion object {
+        val UTF_8: CharsetImpl
+        val US_ASCII: CharsetImpl
+        val ISO_8859_1: CharsetImpl
+        val UTF_16: CharsetImpl
+        val UTF_16BE: CharsetImpl
+        val UTF_16LE: CharsetImpl
+    }
+}
+
+
+@Suppress("unused")
+expect class InputStreamReaderImpl : ReaderImpl {
+    constructor(`in`: InputStreamImpl)
+    constructor(`in`: InputStreamImpl, charsetName: String)
+    constructor(`in`: InputStreamImpl, charset: CharsetImpl)
+
+    fun read(): Int
+    fun ready(): Boolean
+    fun getEncoding(): String
+    fun read(cbuf: CharArray, offset: Int, length: Int): Int
+    fun close()
+
+}
+
+
 expect fun InputStreamImpl.source(): Source
 expect fun FileImpl.sink(): Sink
 
@@ -26,7 +58,7 @@ expect class ByteArrayOutputStreamImpl() : OutputStreamImpl {
 }
 
 @Suppress("UNUSED")
-expect class FileSource(inputStream: InputStreamImpl) : Source{
+expect class FileSource(inputStream: InputStreamImpl) : Source {
     override fun close()
     override fun read(sink: Buffer, byteCount: Long): Long
     override fun timeout(): Timeout
@@ -64,7 +96,7 @@ expect abstract class OutputStreamImpl {
 expect inline fun InputStreamImpl.useImpl(block: (InputStreamImpl) -> Unit)
 expect inline fun OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> Unit)
 
-expect class FileImpl{
+expect class FileImpl {
 
     constructor(path: String)
     constructor(parent: String, child: String)
@@ -93,12 +125,12 @@ expect class FileImpl{
 }
 
 
-expect class RandomAccessFileImpl{
+expect class RandomAccessFileImpl {
     constructor(filePath: String)
     constructor(file: FileImpl)
     constructor(file: FileImpl, mode: String)
 
-    fun writeAtOffset(data: ByteArray,offset: Long, length:Int)
+    fun writeAtOffset(data: ByteArray, offset: Long, length: Int)
     fun readAtOffset(offset: Long, length: Int): ByteArray
     fun getFileLength(): Long
     fun close()

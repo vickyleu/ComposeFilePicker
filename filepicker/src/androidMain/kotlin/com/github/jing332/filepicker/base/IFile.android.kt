@@ -9,9 +9,31 @@ import okio.sink
 import okio.source
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
 
 actual typealias FileImpl = java.io.File
+
+actual typealias CharsetImpl = java.nio.charset.Charset
+
+@Suppress("unused")
+actual fun CharsetImpl.forName(charsetName: String) = Charset.forName(charsetName)
+
+@Suppress("unused")
+actual final class StandardCharsetsImpl {
+    actual companion object {
+        actual val UTF_8: CharsetImpl = CharsetImpl.forName("UTF-8")
+        actual val US_ASCII: CharsetImpl = CharsetImpl.forName("US-ASCII")
+        actual val ISO_8859_1: CharsetImpl = CharsetImpl.forName("ISO-8859-1")
+        actual val UTF_16: CharsetImpl = CharsetImpl.forName("UTF-16")
+        actual val UTF_16BE: CharsetImpl = CharsetImpl.forName("UTF-16BE")
+        actual val UTF_16LE: CharsetImpl = CharsetImpl.forName("UTF-16LE")
+    }
+}
+actual typealias ReaderImpl = java.io.Reader
+@Suppress("unused")
+actual typealias InputStreamReaderImpl = java.io.InputStreamReader
 actual typealias InputStreamImpl = java.io.InputStream
 actual typealias OutputStreamImpl = java.io.OutputStream
 
