@@ -3,10 +3,14 @@ package com.github.jing332.compose_filepicker
 import androidx.compose.runtime.ProvidableCompositionLocal
 import coil3.PlatformContext
 import com.github.jing332.filepicker.base.FileImpl
+import com.github.jing332.filepicker.base.isFile
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.close
 import io.ktor.utils.io.core.isEmpty
 import io.ktor.utils.io.core.readBytes
+import io.ktor.utils.io.readRemaining
+import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.IO
@@ -104,7 +108,7 @@ suspend fun ByteReadChannel.readFully(sink: Sink) {
         while (!channel.isClosedForRead) {
             // TODO: Allocating a new packet on every copy isn't great. Find a faster way to move bytes.
             val packet = channel.readRemaining(OKIO_RECOMMENDED_BUFFER_SIZE.toLong())
-            while (!packet.isEmpty) {
+            while (!packet.exhausted()) {
                 sink.write(packet.readBytes())
             }
         }
@@ -119,10 +123,14 @@ fun Source.toByteReadChannel(): ByteReadChannel {
             val buffer = ByteArray(OKIO_RECOMMENDED_BUFFER_SIZE)
             val bufferedSource = buffer()
             while (bufferedSource.read(buffer).also { bytesRead = it } != -1) {
-                channel.writeFully(buffer, offset = 0, length = bytesRead)
+                channel.writeFully(buffer, startIndex = 0, endIndex = bytesRead)
             }
             channel.close(null)
         }
     }
     return channel
+}
+
+fun FileImpl.test(){
+    this.isFile
 }

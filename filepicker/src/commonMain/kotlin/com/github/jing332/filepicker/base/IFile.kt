@@ -14,22 +14,89 @@ expect abstract class InputStreamImpl {
     fun skip(n: Long): Long
     fun available(): Int
     fun close()
+    fun mark(readLimit: Int)
+    fun reset()
+    fun markSupported(): Boolean
 }
 
-expect abstract class ReaderImpl
-expect abstract class CharsetImpl
+expect open class FilterInputStreamImpl : InputStreamImpl {
+    private constructor(`in`: InputStreamImpl)
+    override fun read(): Int
+}
 
-expect fun CharsetImpl.forName(charsetName: String): CharsetImpl
-@Suppress("unused")
-expect final class StandardCharsetsImpl {
+expect fun byteArrayToStringWithEncoding(byteArray: ByteArray, charset: CharsetImpl): String
+
+expect abstract class ReaderImpl{
+    private constructor()
+    private constructor(lock:Any?)
+}
+
+expect abstract class Charset {
+    fun name(): String
+    final override fun equals(other: Any?): Boolean
+    final override fun toString(): String
+    final override fun hashCode(): Int
+}
+
+internal expect object CharsetImplObj {
+    fun forName(charsetName: String): Charset
+}
+
+expect abstract class CharsetDecoderImpl
+
+class CharsetImpl internal constructor(val charset: Charset) {
     companion object {
-        val UTF_8: CharsetImpl
-        val US_ASCII: CharsetImpl
-        val ISO_8859_1: CharsetImpl
-        val UTF_16: CharsetImpl
-        val UTF_16BE: CharsetImpl
-        val UTF_16LE: CharsetImpl
+        @Suppress("UNUSED")
+        fun forName(charsetName: String): CharsetImpl {
+            return CharsetImpl(CharsetImplObj.forName(charsetName))
+        }
     }
+}
+
+
+expect class BufferedReaderImpl : ReaderImpl {
+    constructor(`in`: ReaderImpl?, sz: Int)
+    constructor(`in`: ReaderImpl?)
+
+    fun readLine(): String?
+
+    fun close()
+}
+
+expect class BufferedInputStreamImpl : FilterInputStreamImpl {
+    constructor(`in`: InputStreamImpl)
+    constructor(`in`: InputStreamImpl, size: Int)
+
+    override fun read(): Int
+}
+
+
+expect  class FileInputStream: InputStreamImpl {
+    constructor(file: FileImpl)
+
+    override fun read(): Int
+}
+
+
+/**
+ * Constant definitions for the standard {@link CharsetImpl Charsets}. These
+ * charsets are guaranteed to be available on every implementation of the Kotlin
+ * Multiplatform .
+ *
+ * @see <a href="Charset.html#standard">Standard Charsets</a>
+ * @since 2.0.20
+ */
+@Suppress("unused")
+expect final class StandardCharsetsImpl
+
+@Suppress("unused")
+expect object StandardCharsetsImplObj {
+    val UTF_8: CharsetImpl
+    val US_ASCII: CharsetImpl
+    val ISO_8859_1: CharsetImpl
+    val UTF_16: CharsetImpl
+    val UTF_16BE: CharsetImpl
+    val UTF_16LE: CharsetImpl
 }
 
 
@@ -37,7 +104,9 @@ expect final class StandardCharsetsImpl {
 expect class InputStreamReaderImpl : ReaderImpl {
     constructor(`in`: InputStreamImpl)
     constructor(`in`: InputStreamImpl, charsetName: String)
-    constructor(`in`: InputStreamImpl, charset: CharsetImpl)
+
+    //    constructor(`in`: InputStreamImpl, cs: CharsetImpl)
+    constructor(`in`: InputStreamImpl, dec: CharsetDecoderImpl)
 
     fun read(): Int
     fun ready(): Boolean
@@ -45,6 +114,11 @@ expect class InputStreamReaderImpl : ReaderImpl {
     fun read(cbuf: CharArray, offset: Int, length: Int): Int
     fun close()
 
+}
+
+@Suppress("UNUSED")
+fun InputStreamReaderImpl(`in`: InputStreamImpl, cs: CharsetImpl): InputStreamReaderImpl {
+    return InputStreamReaderImpl(`in`, cs.charset.name())
 }
 
 
@@ -93,14 +167,16 @@ expect abstract class OutputStreamImpl {
 
 }
 
-expect inline fun InputStreamImpl.useImpl(block: (InputStreamImpl) -> Unit)
-expect inline fun OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> Unit)
+expect inline fun <T> InputStreamImpl.useImpl(block: (InputStreamImpl) -> T):T
+expect inline fun <T> OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> T):T
 
 expect class FileImpl {
 
     constructor(path: String)
     constructor(parent: String, child: String)
     constructor(parent: FileImpl, child: String)
+
+//    fun isFile(): Boolean
 
     fun isDirectory(): Boolean
     fun list(): Array<String>?
@@ -123,6 +199,34 @@ expect class FileImpl {
     fun getParent(): String?
 
 }
+
+@Suppress("UNUSED")
+val FileImpl.isFile: Boolean
+    get() = isDirectory.not()
+
+@Suppress("UNUSED")
+val FileImpl.isDirectory: Boolean
+    get() = isDirectory()
+
+@Suppress("UNUSED")
+val FileImpl.exists: Boolean
+    get() = exists()
+
+@Suppress("UNUSED")
+val FileImpl.absolutePath: String
+    get() = getAbsolutePath()
+
+@Suppress("UNUSED")
+val FileImpl.name: String
+    get() = getName()
+
+@Suppress("UNUSED")
+val FileImpl.parentFile: FileImpl?
+    get() = getParentFile()
+
+@Suppress("UNUSED")
+val FileImpl.parent: String?
+    get() = getParent()
 
 
 expect class RandomAccessFileImpl {

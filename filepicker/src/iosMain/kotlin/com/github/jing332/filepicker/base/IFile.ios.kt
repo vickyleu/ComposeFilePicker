@@ -1,4 +1,5 @@
 @file:OptIn(BetaInteropApi::class)
+@file:Suppress("CAST_NEVER_SUCCEEDS")
 
 package com.github.jing332.filepicker.base
 
@@ -18,6 +19,7 @@ import kotlinx.cinterop.free
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.refTo
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
@@ -60,29 +62,6 @@ import platform.Foundation.timeIntervalSince1970
 import platform.darwin.NSInteger
 import platform.darwin.NSUInteger
 import platform.zlib.uLongVar
-import kotlin.Array
-import kotlin.Boolean
-import kotlin.ByteArray
-import kotlin.CharArray
-import kotlin.Exception
-import kotlin.Int
-import kotlin.Long
-import kotlin.OptIn
-import kotlin.RuntimeException
-import kotlin.String
-import kotlin.Suppress
-import kotlin.Throws
-import kotlin.UByteArray
-import kotlin.Unit
-import kotlin.apply
-import kotlin.byteArrayOf
-import kotlin.code
-import kotlin.getValue
-import kotlin.isInitialized
-import kotlin.lazy
-import kotlin.let
-import kotlin.toUByte
-import kotlin.toULong
 
 
 actual fun FileImpl.resolve(relative: String): FileImpl {
@@ -102,35 +81,115 @@ actual fun FileImpl.uri(): Uri {
     return this.toUri()
 }
 
+actual fun byteArrayToStringWithEncoding(byteArray: ByteArray, charset: CharsetImpl): String {
+    return NSString.create(data = byteArray.toNSData(), encoding = charset.toNSStringEncoding()) as String
+}
+
+
+fun CharsetImpl.toNSStringEncoding(): ULong {
+    return when(this){
+        StandardCharsetsImplObj.UTF_8 ->  NSUTF8StringEncoding
+        StandardCharsetsImplObj.US_ASCII ->  NSASCIIStringEncoding
+        StandardCharsetsImplObj.ISO_8859_1 ->  NSISOLatin1StringEncoding
+        StandardCharsetsImplObj.UTF_16 ->  NSUTF16StringEncoding
+        StandardCharsetsImplObj.UTF_16BE ->  NSUTF16BigEndianStringEncoding
+        StandardCharsetsImplObj.UTF_16LE ->  NSUTF16LittleEndianStringEncoding
+        else ->  NSUTF8StringEncoding
+    }
+}
 abstract interface StreamImpl {
     fun close()
 }
 
-actual abstract class CharsetImpl(val charsetName: String) {
-    companion object {
-        class CharsetImplDelegate(charsetName: String) : CharsetImpl(charsetName) {
-        }
-
-        fun forNameImpl(charsetName: String): CharsetImpl {
-            return CharsetImplDelegate(charsetName)
-        }
+actual abstract class Charset(val charsetName: String) {
+    actual fun name(): String {
+        return charsetName
+    }
+    actual final override fun equals(other: Any?): Boolean{
+        return other is Charset && other.charsetName == this.charsetName
+    }
+    actual final override fun toString(): String{
+        return charsetName
+    }
+    actual final override fun hashCode(): Int{
+        return charsetName.hashCode()
     }
 }
 
-actual fun CharsetImpl.forName(charsetName: String): CharsetImpl =
-    CharsetImpl.forNameImpl(charsetName)
+internal actual object CharsetImplObj {
+    actual fun forName(charsetName: String): Charset = object : Charset(charsetName) {}
+}
 
-actual final class StandardCharsetsImpl {
-    actual companion object {
-        actual val UTF_8: CharsetImpl = CharsetImpl.forNameImpl(charsetName = "UTF-8")
-        actual val US_ASCII: CharsetImpl = CharsetImpl.forNameImpl("US-ASCII")
-        actual val ISO_8859_1: CharsetImpl = CharsetImpl.forNameImpl("ISO-8859-1")
-        actual val UTF_16: CharsetImpl = CharsetImpl.forNameImpl("UTF-16")
-        actual val UTF_16BE: CharsetImpl = CharsetImpl.forNameImpl("UTF-16BE")
-        actual val UTF_16LE: CharsetImpl = CharsetImpl.forNameImpl("UTF-16LE")
+
+
+
+@Suppress("unused")
+actual class BufferedReaderImpl : ReaderImpl {
+    private var inputStreamReader: InputStreamReaderImpl? = null
+    companion object{
+        private  val defaultCharBufferSize: Int = 8192
+    }
+    actual constructor(`in`: ReaderImpl?, sz: Int) {
+        require(sz > 0) { "Buffer size <= 0" }
+        this.inputStreamReader = `in` as? InputStreamReaderImpl
+    }
+
+    actual constructor(`in`: ReaderImpl?) :this(`in`, defaultCharBufferSize)
+
+    actual fun readLine(): String? {
+        val charBuffer = CharArray(1024)
+        val stringBuilder = StringBuilder()
+        var numChars: Int
+        while (true) {
+            numChars = inputStreamReader?.read(charBuffer, 0, charBuffer.size) ?: -1
+            if (numChars == -1) {
+                break
+            }
+            for (i in 0 until numChars) {
+                if (charBuffer[i] == '\n') {
+                    return stringBuilder.toString()
+                }
+                stringBuilder.append(charBuffer[i])
+            }
+        }
+        return if (stringBuilder.isNotEmpty()) stringBuilder.toString() else null
+    }
+
+    actual fun close() {
+        inputStreamReader?.close()
+    }
+}
+@Suppress("unused")
+actual open class FilterInputStreamImpl actual constructor(`in`: InputStreamImpl) :
+    InputStreamImpl() {
+    private var inputStream: InputStreamImpl = `in`
+    actual override fun read(): Int {
+        return inputStream.read()
     }
 }
 
+@Suppress("unused")
+actual class BufferedInputStreamImpl actual constructor(val `in`: InputStreamImpl, size: Int) :
+    FilterInputStreamImpl(`in`) {
+    private var bufferSize: Int = size
+    private var buffer: ByteArray = ByteArray(bufferSize)
+    private var position: Int = 0
+    private var count: Int = 0
+
+    actual constructor(`in`: InputStreamImpl) : this(`in`, 8192)
+
+    actual override fun read(): Int {
+        if (position >= count) {
+            count = `in`.read(buffer, 0, bufferSize)
+            if (count == -1) {
+                return -1
+            }
+            position = 0
+        }
+        return buffer[position++].toInt() and 0xFF
+    }
+}
+@Suppress("unused")
 actual class InputStreamReaderImpl : ReaderImpl {
     private var charset: CharsetImpl? = null
     private var inputStream: InputStreamImpl
@@ -144,15 +203,14 @@ actual class InputStreamReaderImpl : ReaderImpl {
         charsetName: String
     ) {
         this.inputStream = `in`
-        this.charset = CharsetImpl.forNameImpl(charsetName)
+        this.charset = CharsetImpl.forName(charsetName)
     }
 
     actual constructor(
         `in`: InputStreamImpl,
-        charset: CharsetImpl
+        dec: CharsetDecoderImpl
     ) {
         this.inputStream = `in`
-        this.charset = charset
     }
 
     // 如果未提供 CharsetImpl，则从文件头检测编码
@@ -189,7 +247,7 @@ actual class InputStreamReaderImpl : ReaderImpl {
         //byteArray 需要转换为charArray
         // 检查是否传入了 CharsetImpl
         // 使用 NSString 按照指定的 charset 进行解码
-        val encoding: NSStringEncoding = when (charset?.charsetName) {
+        val encoding: NSStringEncoding = when (charset?.charset?.charsetName) {
             "UTF-8" -> NSUTF8StringEncoding
             "UTF-16" -> NSUTF16StringEncoding
             "UTF-16BE" -> NSUTF16BigEndianStringEncoding
@@ -221,19 +279,75 @@ actual class InputStreamReaderImpl : ReaderImpl {
     }
 
     actual fun getEncoding(): String {
-        return charset?.charsetName ?: detectCharset()
+        return charset?.charset?.charsetName ?: detectCharset()
     }
 
+    private var markPosition: Long = -1 // 用于存储标记位置
+    private var buffer: UByteArray? = null // 用于存储标记的数据
+    private var currentPosition: Long = 0L // 当前读取位置
+
+    override fun mark(readLimit: Int) {
+        markPosition = inputStream.markPosition()
+    }
+
+    override fun reset() {
+        inputStream.resetToPosition(markPosition)
+    }
 
 }
 
-actual abstract class ReaderImpl {
 
+
+
+
+
+
+@Suppress("unused")
+actual final class StandardCharsetsImpl {
+
+}
+
+actual abstract class CharsetDecoderImpl {
+
+}
+
+
+
+@Suppress("unused")
+actual object StandardCharsetsImplObj {
+    actual val UTF_8: CharsetImpl = CharsetImpl.forName("UTF-8")
+    actual val US_ASCII: CharsetImpl = CharsetImpl.forName("US-ASCII")
+    actual val ISO_8859_1: CharsetImpl = CharsetImpl.forName("ISO-8859-1")
+    actual val UTF_16: CharsetImpl = CharsetImpl.forName("UTF-16")
+    actual val UTF_16BE: CharsetImpl = CharsetImpl.forName("UTF-16BE")
+    actual val UTF_16LE: CharsetImpl = CharsetImpl.forName("UTF-16LE")
+}
+
+@Suppress("unused", "LeakingThis")
+actual abstract class ReaderImpl {
+    private var lock: Any? = null
+    actual constructor(){
+        this.lock = this
+    }
+    actual constructor(lock:Any?){
+        if(lock==null)throw NullPointerException()
+        this.lock = lock
+    }
+    @Suppress("unused")
+    open fun mark(readLimit: Int) {
+        throw IOException("mark() not supported");
+    }
+
+    @Suppress("unused")
+    open fun reset() {
+        throw IOException("reset() not supported");
+    }
 }
 
 //ios 实现
 @OptIn(ExperimentalForeignApi::class)
 actual abstract class InputStreamImpl : StreamImpl {
+
     actual abstract fun read(): Int
 
     actual open fun read(b: ByteArray): Int {
@@ -249,8 +363,20 @@ actual abstract class InputStreamImpl : StreamImpl {
     actual override fun close() {
     }
 
-    abstract fun mark(readLimit: Int)
-    abstract fun reset()
+    actual fun mark(readLimit: Int) {}
+    actual fun reset() {
+        throw IOException("mark/reset not supported")
+    }
+
+    open fun markPosition(): Long {
+        // 返回当前流位置
+        return 0
+    }
+
+    open fun resetToPosition(position: Long) {
+    }
+
+    actual fun markSupported(): Boolean = false
 
 }
 
@@ -304,8 +430,11 @@ actual abstract class OutputStreamImpl : StreamImpl {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
+actual class FileInputStream actual constructor(private val file: FileImpl) : InputStreamImpl() {
     private var inputStream = NSInputStream.inputStreamWithFileAtPath(file.getAbsolutePath())!!
+    // 维护当前位置和标记位置
+    private var currentPosition: Long = 0
+    private var markedPosition: Long = -1
 
     init {
         inputStream.open()
@@ -315,13 +444,14 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
 
     private var skipBuffer = 0L
 
-    override fun read(): Int {
+    actual override fun read(): Int {
         memScoped {
             val uByteArray = UByteArray(1024)
             uByteArray.usePinned {
                 val bytesRead =
                     inputStream.read(it.addressOf(0), uByteArray.size.toULong())
                 return (if (bytesRead > 0) {
+                    currentPosition += bytesRead // 更新当前位置
                     bytesRead.toInt()
                 } else -1).apply {
                     if (this <= 0) {
@@ -356,6 +486,7 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
                             // 将读取到的内容复制回 ByteArray
                             for (i in 0 until bytesRead.toInt()) {
                                 b[off + i] = ubyteBuffer[i].toByte()
+                                currentPosition += bytesRead // 更新当前位置
                             }
                         }
                     }
@@ -380,6 +511,7 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
     }
 
     override fun skip(n: Long): Long {
+        currentPosition += n // 跳过更新当前位置
         this.skipBuffer += n
         return this.skipBuffer
     }
@@ -394,48 +526,26 @@ class FileInputStream(private val file: FileImpl) : InputStreamImpl() {
         skipBuffer = 0
         inputStream.close()
     }
-    private var markPosition: Long = -1 // 用于存储标记位置
-    private var buffer: ByteArray? = null // 用于存储标记的数据
-    private var currentPosition: Long = 0 // 当前读取位置
 
-
-    override fun mark(readLimit: Int) {
-        // 保存当前读取位置
-        markPosition = currentPosition
-        // 初始化缓冲区
-        buffer = ByteArray(readLimit)
-        // 读取数据到缓冲区
-        val bytesRead = inputStream.read(buffer!!, 0, readLimit)
-        // 更新当前读取位置
-        if (bytesRead > 0) {
-            currentPosition += bytesRead.toLong()
-        }
+    override fun markPosition(): Long {
+        markedPosition = currentPosition // 标记当前文件位置
+        return markedPosition
     }
 
-    override fun reset() {
-        if (markPosition < 0 || buffer == null) {
-            throw IOException("Stream not marked or invalid position")
+    override fun resetToPosition(position: Long) {
+        if (position > currentPosition || position < 0) {
+            throw IOException("Invalid reset position")
         }
-
-        // 重置输入流
-        inputStream.close() // 关闭当前流
-        inputStream = NSInputStream.inputStreamWithFileAtPath(file.getAbsolutePath())!! // 重新打开输入流
+        // 重置位置：重新打开流并跳到标记位置
+        inputStream.close()
+        inputStream = NSInputStream.inputStreamWithFileAtPath(file.getAbsolutePath())!!
         inputStream.open()
-
-        // 将当前读取位置重置到标记位置
-        val toSkip = markPosition - currentPosition
-        if (toSkip > 0) {
-            inputStream.skip(toSkip) // 跳过到标记位置
-        }
-
-        // 将缓存的数据写回到输入流中
-        // 注意: 这里的实现可能需要根据具体需求调整
-        if (buffer != null) {
-            inputStream.write(buffer!!, 0, buffer!!.size) // 根据需要写入数据
-        }
-        // 更新当前读取位置
-        currentPosition = markPosition
+        currentPosition = 0
+        skip(position) // 通过跳过字节将流恢复到标记位置
+        currentPosition = position
     }
+
+
 }
 
 @OptIn(BetaInteropApi::class)
@@ -506,23 +616,27 @@ class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
 }
 
 
-inline fun <T : StreamImpl> T.use(block: (T) -> Unit) {
+inline fun <T : StreamImpl,P> T.use(block: (T) -> P):P {
     try {
-        block(this)
+        return block(this)
     } finally {
         this.close()
     }
 }
 
+
+
+
 @Suppress("unused")
-actual inline fun InputStreamImpl.useImpl(block: (InputStreamImpl) -> Unit) {
-    this.use(block)
+actual inline fun <T> InputStreamImpl.useImpl(block: (InputStreamImpl) -> T):T {
+    return this.use(block)
 }
 
 @Suppress("unused")
-actual inline fun OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> Unit) {
-    this.use(block)
+actual inline fun <T>OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> T):T{
+    return this.use(block)
 }
+
 
 @OptIn(ExperimentalForeignApi::class)
 actual class FileImpl {
@@ -569,6 +683,7 @@ actual class FileImpl {
         if (::path.isInitialized.not()) throw RuntimeException("path is not initialized")
         path
     }
+
 
     actual fun isDirectory(): Boolean {
         val isDirectory = nativeHeap.alloc<BooleanVar>()

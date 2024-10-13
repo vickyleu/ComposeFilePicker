@@ -15,27 +15,50 @@ import java.nio.charset.StandardCharsets
 
 actual typealias FileImpl = java.io.File
 
-actual typealias CharsetImpl = java.nio.charset.Charset
+actual typealias Charset = java.nio.charset.Charset
+actual typealias CharsetDecoderImpl = java.nio.charset.CharsetDecoder
 
-@Suppress("unused")
-actual fun CharsetImpl.forName(charsetName: String) = Charset.forName(charsetName)
-
-@Suppress("unused")
-actual final class StandardCharsetsImpl {
-    actual companion object {
-        actual val UTF_8: CharsetImpl = CharsetImpl.forName("UTF-8")
-        actual val US_ASCII: CharsetImpl = CharsetImpl.forName("US-ASCII")
-        actual val ISO_8859_1: CharsetImpl = CharsetImpl.forName("ISO-8859-1")
-        actual val UTF_16: CharsetImpl = CharsetImpl.forName("UTF-16")
-        actual val UTF_16BE: CharsetImpl = CharsetImpl.forName("UTF-16BE")
-        actual val UTF_16LE: CharsetImpl = CharsetImpl.forName("UTF-16LE")
-    }
+actual fun byteArrayToStringWithEncoding(byteArray: ByteArray, charset: CharsetImpl): String {
+    return String(byteArray, charset.charset) // 使用 Java 提供的 String(byte[], Charset) 构造函数
 }
+
+
+@Suppress("unused")
+actual typealias StandardCharsetsImpl = java.nio.charset.StandardCharsets
+
+@Suppress("unused")
+actual object StandardCharsetsImplObj {
+    actual val UTF_8: CharsetImpl = CharsetImpl(StandardCharsets.UTF_8)
+    actual val US_ASCII: CharsetImpl = CharsetImpl(StandardCharsets.US_ASCII)
+    actual val ISO_8859_1: CharsetImpl = CharsetImpl(StandardCharsets.ISO_8859_1)
+    actual val UTF_16: CharsetImpl = CharsetImpl(StandardCharsets.UTF_16)
+    actual val UTF_16BE: CharsetImpl = CharsetImpl(StandardCharsets.UTF_16BE)
+    actual val UTF_16LE: CharsetImpl = CharsetImpl(StandardCharsets.UTF_16LE)
+}
+
+@Suppress("unused")
+internal actual object CharsetImplObj {
+    actual fun forName(charsetName: String): Charset = Charset.forName(charsetName)
+}
+
+
+actual typealias BufferedReaderImpl = java.io.BufferedReader
+actual typealias FilterInputStreamImpl = java.io.FilterInputStream
+actual typealias BufferedInputStreamImpl = java.io.BufferedInputStream
 actual typealias ReaderImpl = java.io.Reader
 @Suppress("unused")
 actual typealias InputStreamReaderImpl = java.io.InputStreamReader
 actual typealias InputStreamImpl = java.io.InputStream
 actual typealias OutputStreamImpl = java.io.OutputStream
+actual typealias FileInputStream = java.io.FileInputStream
+
+//actual abstract class FileInputStream : java.io.FileInputStream{
+//    actual constructor(file: FileImpl):super(file)
+//
+//    override fun read(): Int {
+//        return file.inputStream().read()
+//    }
+//}
 
 @Suppress("unused")
 actual fun InputStreamImpl.source(): Source {
@@ -52,14 +75,15 @@ actual class FileSource actual constructor(inputStream: InputStreamImpl) :
     Source by inputStream.source()
 
 @Suppress("unused")
-actual inline fun InputStreamImpl.useImpl(block: (InputStreamImpl) -> Unit) {
-    this.use(block)
+actual inline fun <T> InputStreamImpl.useImpl(block: (InputStreamImpl) -> T):T {
+    return this.use(block)
 }
 
 @Suppress("unused")
-actual inline fun OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> Unit) {
-    this.use(block)
+actual inline fun <T>OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> T):T{
+   return this.use(block)
 }
+
 
 actual fun FileImpl.resolve(relative: String): FileImpl {
     return this.resolve(relative)
@@ -119,9 +143,9 @@ actual class RandomAccessFileImpl {
     }
 
     actual fun close() {
-        if(isClosed)return
+        if (isClosed) return
         randomAccessFile.close()
-        isClosed=true
+        isClosed = true
     }
 
     actual fun toFile(): FileImpl {
@@ -131,7 +155,7 @@ actual class RandomAccessFileImpl {
     private var isClosed = false
 
     fun syncInternal() {
-        if(isClosed)return
+        if (isClosed) return
         randomAccessFile.fd.sync()
     }
 
