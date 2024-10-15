@@ -477,7 +477,6 @@ actual class FileInputStream actual constructor(private val file: FileImpl) : In
                 // 要获取稳定的C指针,必须在pin固定后操作,否则会导致指针失效
                 ubyteBuffer.usePinned { pinnedArray ->
                     val ubuffer = pinnedArray.addressOf(0).reinterpret<UByteVar>()
-                    println("pinnedArray:ptr:${ubuffer}")
                     val bytesRead: NSInteger = inputStream.read(ubuffer, len.toULong())
                     return bytesRead.toInt().apply {
                         if (this <= 0) {
@@ -501,8 +500,7 @@ actual class FileInputStream actual constructor(private val file: FileImpl) : In
     override fun read(b: ByteArray): Int {
         val skip = skipBuffer.toInt()
         skipBuffer = 0
-        println("file: ${file.getAbsolutePath()}  ${file.length()} ${file.lastModified()} ${file.getName()}")
-        println("skip: $skip b.size${b.size}")
+        println("file: ${file.getAbsolutePath()} throw:${IllegalArgumentException("嘿嘿哟").stackTraceToString()}  ${file.length()} ${file.lastModified()} ${file.getName()}")
         return read(b, skip, b.size).apply {
             if (this <= 0) {
                 isEnded = true
