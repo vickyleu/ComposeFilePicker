@@ -19,7 +19,6 @@ import kotlinx.cinterop.free
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.refTo
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
@@ -40,6 +39,7 @@ import platform.Foundation.NSMakeRange
 import platform.Foundation.NSMutableData
 import platform.Foundation.NSNumber
 import platform.Foundation.NSOutputStream
+import platform.Foundation.NSStreamStatusNotOpen
 import platform.Foundation.NSString
 import platform.Foundation.NSStringEncoding
 import platform.Foundation.NSURL
@@ -56,6 +56,7 @@ import platform.Foundation.fileHandleForWritingAtPath
 import platform.Foundation.getBytes
 import platform.Foundation.inputStreamWithFileAtPath
 import platform.Foundation.outputStreamToFileAtPath
+import platform.Foundation.outputStreamToMemory
 import platform.Foundation.readDataOfLength
 import platform.Foundation.synchronizeFile
 import platform.Foundation.timeIntervalSince1970
@@ -82,21 +83,25 @@ actual fun FileImpl.uri(): Uri {
 }
 
 actual fun byteArrayToStringWithEncoding(byteArray: ByteArray, charset: CharsetImpl): String {
-    return NSString.create(data = byteArray.toNSData(), encoding = charset.toNSStringEncoding()) as String
+    return NSString.create(
+        data = byteArray.toNSData(),
+        encoding = charset.toNSStringEncoding()
+    ) as String
 }
 
 
 fun CharsetImpl.toNSStringEncoding(): ULong {
-    return when(this){
-        StandardCharsetsImplObj.UTF_8 ->  NSUTF8StringEncoding
-        StandardCharsetsImplObj.US_ASCII ->  NSASCIIStringEncoding
-        StandardCharsetsImplObj.ISO_8859_1 ->  NSISOLatin1StringEncoding
-        StandardCharsetsImplObj.UTF_16 ->  NSUTF16StringEncoding
-        StandardCharsetsImplObj.UTF_16BE ->  NSUTF16BigEndianStringEncoding
-        StandardCharsetsImplObj.UTF_16LE ->  NSUTF16LittleEndianStringEncoding
-        else ->  NSUTF8StringEncoding
+    return when (this) {
+        StandardCharsetsImplObj.UTF_8 -> NSUTF8StringEncoding
+        StandardCharsetsImplObj.US_ASCII -> NSASCIIStringEncoding
+        StandardCharsetsImplObj.ISO_8859_1 -> NSISOLatin1StringEncoding
+        StandardCharsetsImplObj.UTF_16 -> NSUTF16StringEncoding
+        StandardCharsetsImplObj.UTF_16BE -> NSUTF16BigEndianStringEncoding
+        StandardCharsetsImplObj.UTF_16LE -> NSUTF16LittleEndianStringEncoding
+        else -> NSUTF8StringEncoding
     }
 }
+
 abstract interface StreamImpl {
     fun close()
 }
@@ -105,13 +110,16 @@ actual abstract class Charset(val charsetName: String) {
     actual fun name(): String {
         return charsetName
     }
-    actual final override fun equals(other: Any?): Boolean{
+
+    actual final override fun equals(other: Any?): Boolean {
         return other is Charset && other.charsetName == this.charsetName
     }
-    actual final override fun toString(): String{
+
+    actual final override fun toString(): String {
         return charsetName
     }
-    actual final override fun hashCode(): Int{
+
+    actual final override fun hashCode(): Int {
         return charsetName.hashCode()
     }
 }
@@ -121,20 +129,20 @@ internal actual object CharsetImplObj {
 }
 
 
-
-
 @Suppress("unused")
 actual class BufferedReaderImpl : ReaderImpl {
     private var inputStreamReader: InputStreamReaderImpl? = null
-    companion object{
-        private  val defaultCharBufferSize: Int = 8192
+
+    companion object {
+        private val defaultCharBufferSize: Int = 8192
     }
+
     actual constructor(`in`: ReaderImpl?, sz: Int) {
         require(sz > 0) { "Buffer size <= 0" }
         this.inputStreamReader = `in` as? InputStreamReaderImpl
     }
 
-    actual constructor(`in`: ReaderImpl?) :this(`in`, defaultCharBufferSize)
+    actual constructor(`in`: ReaderImpl?) : this(`in`, defaultCharBufferSize)
 
     actual fun readLine(): String? {
         val charBuffer = CharArray(1024)
@@ -159,9 +167,12 @@ actual class BufferedReaderImpl : ReaderImpl {
         inputStreamReader?.close()
     }
 }
+
 @Suppress("unused")
 actual open class FilterInputStreamImpl actual constructor(`in`: InputStreamImpl) :
     InputStreamImpl() {
+    override val originStream: NSInputStream
+        get() = inputStream.originStream
     private var inputStream: InputStreamImpl = `in`
     actual override fun read(): Int {
         return inputStream.read()
@@ -189,6 +200,7 @@ actual class BufferedInputStreamImpl actual constructor(val `in`: InputStreamImp
         return buffer[position++].toInt() and 0xFF
     }
 }
+
 @Suppress("unused")
 actual class InputStreamReaderImpl : ReaderImpl {
     private var charset: CharsetImpl? = null
@@ -297,11 +309,6 @@ actual class InputStreamReaderImpl : ReaderImpl {
 }
 
 
-
-
-
-
-
 @Suppress("unused")
 actual final class StandardCharsetsImpl {
 
@@ -310,7 +317,6 @@ actual final class StandardCharsetsImpl {
 actual abstract class CharsetDecoderImpl {
 
 }
-
 
 
 @Suppress("unused")
@@ -326,13 +332,16 @@ actual object StandardCharsetsImplObj {
 @Suppress("unused", "LeakingThis")
 actual abstract class ReaderImpl {
     private var lock: Any? = null
-    actual constructor(){
+
+    actual constructor() {
         this.lock = this
     }
-    actual constructor(lock:Any?){
-        if(lock==null)throw NullPointerException()
+
+    actual constructor(lock: Any?) {
+        if (lock == null) throw NullPointerException()
         this.lock = lock
     }
+
     @Suppress("unused")
     open fun mark(readLimit: Int) {
         throw IOException("mark() not supported");
@@ -347,6 +356,8 @@ actual abstract class ReaderImpl {
 //ios 实现
 @OptIn(ExperimentalForeignApi::class)
 actual abstract class InputStreamImpl : StreamImpl {
+
+    internal abstract val originStream: NSInputStream
 
     actual abstract fun read(): Int
 
@@ -392,6 +403,10 @@ actual fun InputStreamImpl.source(): Source {
 
 actual class FileSource actual constructor(private val inputStream: InputStreamImpl) :
     Source {
+    init {
+        if (inputStream.originStream.streamStatus == NSStreamStatusNotOpen) inputStream.originStream.open()
+    }
+
     @Throws(IOException::class)
     actual override fun read(sink: okio.Buffer, byteCount: Long): Long {
         val byteArray = ByteArray(byteCount.toInt())
@@ -413,6 +428,7 @@ actual class FileSource actual constructor(private val inputStream: InputStreamI
 }
 
 actual abstract class OutputStreamImpl : StreamImpl {
+    internal abstract val originStream: NSOutputStream
     actual abstract fun write(b: Int)
     actual open fun write(b: ByteArray) {
         write(b, 0, b.size)
@@ -431,7 +447,11 @@ actual abstract class OutputStreamImpl : StreamImpl {
 
 @OptIn(ExperimentalForeignApi::class)
 actual class FileInputStream actual constructor(private val file: FileImpl) : InputStreamImpl() {
+
     private var inputStream = NSInputStream.inputStreamWithFileAtPath(file.getAbsolutePath())!!
+    override val originStream: NSInputStream
+        get() = inputStream
+
     // 维护当前位置和标记位置
     private var currentPosition: Long = 0
     private var markedPosition: Long = -1
@@ -445,6 +465,7 @@ actual class FileInputStream actual constructor(private val file: FileImpl) : In
     private var skipBuffer = 0L
 
     actual override fun read(): Int {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return -1
         memScoped {
             val uByteArray = UByteArray(1024)
             uByteArray.usePinned {
@@ -465,8 +486,8 @@ actual class FileInputStream actual constructor(private val file: FileImpl) : In
     }
 
     override fun read(b: ByteArray, off: Int, len: Int): Int {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return -1
         memScoped {
-            println("file: ${file.getAbsolutePath()}  ${file.length()} ${file.lastModified()} ${file.getName()}  len:$len off:$off")
             try {
                 if (len - off <= 0) {
                     return -1
@@ -477,7 +498,6 @@ actual class FileInputStream actual constructor(private val file: FileImpl) : In
                 // 要获取稳定的C指针,必须在pin固定后操作,否则会导致指针失效
                 ubyteBuffer.usePinned { pinnedArray ->
                     val ubuffer = pinnedArray.addressOf(0).reinterpret<UByteVar>()
-                    println("pinnedArray:ptr:${ubuffer}")
                     val bytesRead: NSInteger = inputStream.read(ubuffer, len.toULong())
                     return bytesRead.toInt().apply {
                         if (this <= 0) {
@@ -499,10 +519,9 @@ actual class FileInputStream actual constructor(private val file: FileImpl) : In
     }
 
     override fun read(b: ByteArray): Int {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return -1
         val skip = skipBuffer.toInt()
         skipBuffer = 0
-        println("file: ${file.getAbsolutePath()}  ${file.length()} ${file.lastModified()} ${file.getName()}")
-        println("skip: $skip b.size${b.size}")
         return read(b, skip, b.size).apply {
             if (this <= 0) {
                 isEnded = true
@@ -511,28 +530,33 @@ actual class FileInputStream actual constructor(private val file: FileImpl) : In
     }
 
     override fun skip(n: Long): Long {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return -1
         currentPosition += n // 跳过更新当前位置
         this.skipBuffer += n
         return this.skipBuffer
     }
 
     override fun available(): Int {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return 0
         return if (isEnded.not() && inputStream.hasBytesAvailable) {
             read()
         } else 0
     }
 
     override fun close() {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return
         skipBuffer = 0
         inputStream.close()
     }
 
     override fun markPosition(): Long {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return -1
         markedPosition = currentPosition // 标记当前文件位置
         return markedPosition
     }
 
     override fun resetToPosition(position: Long) {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return
         if (position > currentPosition || position < 0) {
             throw IOException("Invalid reset position")
         }
@@ -565,21 +589,27 @@ fun ByteArray.toNSData(): NSData = memScoped {
 class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
     private val outputStream = NSOutputStream.outputStreamToFileAtPath(file.getAbsolutePath(), true)
 
+    override val originStream: NSOutputStream
+        get() = outputStream
+
     init {
         outputStream.open()
     }
 
     override fun write(b: Int) {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return
         val buffer = byteArrayOf(b.toByte())
         write(buffer, 0, 1)
     }
 
     override fun write(b: ByteArray) {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return
         write(b, 0, b.size)
     }
 
 
     override fun write(b: ByteArray, off: Int, len: Int) {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return
         if (outputStream.hasSpaceAvailable.not()) return
         memScoped {
             if (len - off <= 0) {
@@ -596,7 +626,6 @@ class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
                 ubyteBuffer.usePinned { pinnedArray ->
                     // 获取指向 UByteArray 的指针
                     val ubuffer = pinnedArray.addressOf(0).reinterpret<UByteVar>()
-                    println("pinnedArray:ptr:${ubuffer}")
                     val bytesWrite: NSInteger = outputStream.write(ubuffer, (len - off).toULong())
                 }
             } catch (e: Exception) {
@@ -611,12 +640,13 @@ class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
     }
 
     override fun close() {
+        if (originStream.streamStatus == NSStreamStatusNotOpen) return
         outputStream.close()
     }
 }
 
 
-inline fun <T : StreamImpl,P> T.use(block: (T) -> P):P {
+inline fun <T : StreamImpl, P> T.use(block: (T) -> P): P {
     try {
         return block(this)
     } finally {
@@ -625,15 +655,13 @@ inline fun <T : StreamImpl,P> T.use(block: (T) -> P):P {
 }
 
 
-
-
 @Suppress("unused")
-actual inline fun <T> InputStreamImpl.useImpl(block: (InputStreamImpl) -> T):T {
+actual inline fun <T> InputStreamImpl.useImpl(block: (InputStreamImpl) -> T): T {
     return this.use(block)
 }
 
 @Suppress("unused")
-actual inline fun <T>OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> T):T{
+actual inline fun <T> OutputStreamImpl.useImpl(block: (OutputStreamImpl) -> T): T {
     return this.use(block)
 }
 
@@ -655,18 +683,11 @@ actual class FileImpl {
         this.path = path
     }
 
-    actual constructor(parent: String, child: String) : this(path = "$parent/$child") {
-//        this.path = "$parent/$child"
-        println("this.path::${this.path}")
-    }
-
+    actual constructor(parent: String, child: String) : this(path = "$parent/$child")
     actual constructor(parent: FileImpl, child: String) : this(
         parent = parent.getAbsolutePath(),
         child = child
-    ) {
-//        this.path = "${parent.getAbsolutePath()}/$child"
-        println("this.path::${this.path}")
-    }
+    )
 
     actual fun getParentFile(): FileImpl? {
         val parentPath = getParent()
@@ -783,6 +804,14 @@ actual fun FileImpl.isLocalFile(): Boolean {
 
 actual class ByteArrayOutputStreamImpl actual constructor() : OutputStreamImpl() {
     private val nsDate = NSMutableData()
+    private val outputStream = NSOutputStream.outputStreamToMemory()
+    override val originStream: NSOutputStream
+        get() = outputStream
+
+    init {
+        outputStream.open()
+    }
+
     actual fun toByteArray(): ByteArray {
         val buffer = ByteArray(nsDate.length.toInt())
         memScoped {
@@ -806,6 +835,10 @@ actual class ByteArrayOutputStreamImpl actual constructor() : OutputStreamImpl()
     }
 
     actual override fun write(b: Int) {
+    }
+
+    override fun close() {
+        outputStream.close()
     }
 }
 
