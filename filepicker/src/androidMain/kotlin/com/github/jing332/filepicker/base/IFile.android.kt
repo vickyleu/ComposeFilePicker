@@ -3,6 +3,12 @@ package com.github.jing332.filepicker.base
 import androidx.core.net.toUri
 import coil3.Uri
 import coil3.toCoilUri
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import okio.Sink
 import okio.Source
 import okio.sink
@@ -125,13 +131,23 @@ actual class RandomAccessFileImpl {
         this.file = file
         randomAccessFile = java.io.RandomAccessFile(file, mode)
     }
+    private val scope = CoroutineScope(Dispatchers.IO)
+    private val mutex = kotlinx.coroutines.sync.Mutex()
 
     actual fun writeAtOffset(data: ByteArray, offset: Long, length: Int) {
-        randomAccessFile.seek(offset)
-        randomAccessFile.write(data, 0, length)
+        if(isClosed) return
+        scope.launch {
+            withContext(Dispatchers.IO){
+                mutex.withLock {
+                    randomAccessFile.seek(offset)
+                    randomAccessFile.write(data, 0, length)
+                }
+            }
+        }
     }
 
     actual fun readAtOffset(offset: Long, length: Int): ByteArray {
+        if(isClosed) return ByteArray(0)
         randomAccessFile.seek(offset)
         val buffer = ByteArray(length)
         randomAccessFile.read(buffer)
@@ -153,6 +169,10 @@ actual class RandomAccessFileImpl {
     }
 
     private var isClosed = false
+
+    actual fun isClosed(): Boolean {
+        return isClosed
+    }
 
     fun syncInternal() {
         if (isClosed) return

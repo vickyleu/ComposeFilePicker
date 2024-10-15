@@ -22,6 +22,12 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import okio.IOException
 import okio.Sink
 import okio.Source
@@ -708,8 +714,12 @@ actual class FileImpl {
 
     actual fun isDirectory(): Boolean {
         val isDirectory = nativeHeap.alloc<BooleanVar>()
-        val exists = fileManager.fileExistsAtPath(filePath, isDirectory = isDirectory.ptr)
-        return exists && isDirectory.value
+        try {
+            val exists = fileManager.fileExistsAtPath(filePath, isDirectory = isDirectory.ptr)
+            return exists && isDirectory.value
+        }finally {
+            nativeHeap.free(isDirectory.ptr)
+        }
     }
 
     actual fun list(): Array<String>? {
@@ -890,30 +900,40 @@ actual class RandomAccessFileImpl {
         }
     }
 
+    private val scope = CoroutineScope(Dispatchers.IO)
+
+    private val mutex = kotlinx.coroutines.sync.Mutex()
 
     actual fun writeAtOffset(data: ByteArray, offset: Long, length: Int) {
         if (::fileWritingHandle.isInitialized.not()) return
+        if (isClosed) return
         if (data.size < length) {
             return
         }
-        fileWritingHandle.seekToOffset(offset.toULong(), null)
-        memScoped {
-            data.usePinned {
-                val ptr = it.addressOf(0)
-                val ulong = nativeHeap.alloc<uLongVar>()
-                fileWritingHandle.getOffset(ulong.ptr, null)
-                val pos = ulong.value.toInt()
-                nativeHeap.free(ulong.ptr)
-                fileWritingHandle.writeData(NSData.create(ptr, length.toULong()), null)
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                mutex.withLock {
+                    //NSFileHandle
+                    fileWritingHandle.seekToOffset(offset.toULong(), null)
+                    memScoped {
+                        data.usePinned {
+                            val ptr = it.addressOf(0)
+                            val ulong = nativeHeap.alloc<uLongVar>()
+                            fileWritingHandle.getOffset(ulong.ptr, null)
+                            val pos = ulong.value.toInt()
+                            nativeHeap.free(ulong.ptr)
+                            fileWritingHandle.writeData(NSData.create(ptr, length.toULong()), null)
 //                fileWritingHandle.synchronizeFile() // 不能调用,unknown error
+                        }
+                    }
+                }
             }
-//            val buffer = data.refTo(0).getPointer(this)
-//            fileWritingHandle.writeData(NSData.create(buffer, length.toULong()), null)
         }
     }
 
     actual fun readAtOffset(offset: Long, length: Int): ByteArray {
         if (::fileReadingHandle.isInitialized.not()) return ByteArray(0)
+        if (isClosed) return ByteArray(0)
         fileReadingHandle.seekToOffset(offset.toULong(), null)
         fileReadingHandle.readDataOfLength(length.toULong()).let {
             val data = it
@@ -937,6 +957,10 @@ actual class RandomAccessFileImpl {
 
     private var isClosed = false
 
+    actual fun isClosed(): Boolean {
+        return isClosed
+    }
+
     actual fun close() {
         if (isClosed) return
         if (::fileReadingHandle.isInitialized) {
@@ -948,6 +972,7 @@ actual class RandomAccessFileImpl {
         }
         isClosed = true
     }
+
 
     actual fun toFile(): FileImpl {
         return file

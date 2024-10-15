@@ -240,6 +240,8 @@ expect class RandomAccessFileImpl {
     fun close()
 
     fun toFile(): FileImpl
+
+    fun isClosed(): Boolean
 }
 
 expect fun RandomAccessFileImpl.sync()
