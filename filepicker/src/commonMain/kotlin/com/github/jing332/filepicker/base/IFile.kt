@@ -240,7 +240,7 @@ expect class RandomAccessFileImpl {
     fun close()
 
     fun toFile(): FileImpl
-
+    suspend fun writeAtOffsetAsync(data: ByteArray, offset: Long, length: Int)
     fun isClosed(): Boolean
 }
 

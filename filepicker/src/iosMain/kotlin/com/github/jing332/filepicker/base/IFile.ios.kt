@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
@@ -904,9 +905,39 @@ actual class RandomAccessFileImpl {
         }
     }
 
-    private val job = Job()
-    private val scope = CoroutineScope(Dispatchers.IO + job)
+//    private val job = Job()
+    private val writerJob = CoroutineScope(Dispatchers.IO).launch {
+    for (request in writeChannel) {
+        writeData(request.data, request.offset, request.length)
+    }
+}
+    private val scope = CoroutineScope(Dispatchers.IO + writerJob)
     private val mutex = kotlinx.coroutines.sync.Mutex()
+    // 写入请求数据类
+    private data class WriteRequest(val data: ByteArray, val offset: Long, val length: Int)
+
+    private val writeChannel = Channel<WriteRequest>(capacity = Channel.UNLIMITED)
+
+    // 实际执行写入操作
+    private suspend fun writeData(data: ByteArray, offset: Long, length: Int) {
+        // NSFileHandle
+        if (isClosed) return
+        if (data.size < length) return
+
+        data.usePinned {
+            val ptr = it.addressOf(0)
+            val nsData = NSData.create(ptr, length.toULong())
+            mutex.withLock {
+                // 这里是写入逻辑
+                fileWritingHandle.seekToOffset(offset.toULong(), null)
+                fileWritingHandle.writeData(nsData, null)
+            }
+        }
+    }
+    // 添加写入请求
+    actual suspend fun writeAtOffsetAsync(data: ByteArray, offset: Long, length: Int) {
+        writeChannel.send(WriteRequest(data.copyOf(length), offset, length))
+    }
 
     actual fun writeAtOffset(data: ByteArray, offset: Long, length: Int) {
         memScoped {
@@ -918,10 +949,10 @@ actual class RandomAccessFileImpl {
             //NSFileHandle
             data.usePinned {
                 val ptr = it.addressOf(0)
-                val ulong = nativeHeap.alloc<uLongVar>()
+                /*val ulong = nativeHeap.alloc<uLongVar>()
                 fileWritingHandle.getOffset(ulong.ptr, null)
                 val pos = ulong.value.toInt()
-                nativeHeap.free(ulong.ptr)
+                nativeHeap.free(ulong.ptr)*/
                 val nsData = NSData.create(ptr, length.toULong())
                 scope.launch {
                     try {
@@ -986,10 +1017,12 @@ actual class RandomAccessFileImpl {
         if (mutex.isLocked) {
             mutex.unlock()
         }
-        try {
-            job.cancel() // 取消所有正在执行的协程
-        }catch (e:Exception){
-        }
+        // 结束写入协程
+        writerJob.cancel()
+//        try {
+//            job.cancel() // 取消所有正在执行的协程
+//        }catch (e:Exception){
+//        }
     }
 
 

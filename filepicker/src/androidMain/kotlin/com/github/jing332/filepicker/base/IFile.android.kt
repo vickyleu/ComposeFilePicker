@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
@@ -133,9 +134,33 @@ actual class RandomAccessFileImpl {
         this.file = file
         randomAccessFile = java.io.RandomAccessFile(file, mode)
     }
-    private val job = Job()
-    private val scope = CoroutineScope(Dispatchers.IO + job)
+    private val writerJob = CoroutineScope(Dispatchers.IO).launch {
+        for (request in writeChannel) {
+            writeData(request.data, request.offset, request.length)
+        }
+    }
+    private val scope = CoroutineScope(Dispatchers.IO + writerJob)
     private val mutex = kotlinx.coroutines.sync.Mutex()
+    // 写入请求数据类
+    private data class WriteRequest(val data: ByteArray, val offset: Long, val length: Int)
+
+    private val writeChannel = Channel<WriteRequest>(capacity = Channel.UNLIMITED)
+
+    // 实际执行写入操作
+    private suspend fun writeData(data: ByteArray, offset: Long, length: Int) {
+        // NSFileHandle
+        if (isClosed) return
+        if (data.size < length) return
+        mutex.withLock {
+            if (isClosed) return
+            randomAccessFile.seek(offset)
+            randomAccessFile.write(data, 0, length)
+        }
+    }
+    // 添加写入请求
+    actual suspend fun writeAtOffsetAsync(data: ByteArray, offset: Long, length: Int) {
+        writeChannel.send(WriteRequest(data.copyOf(length), offset, length))
+    }
 
 
     actual fun writeAtOffset(data: ByteArray, offset: Long, length: Int) {
@@ -178,7 +203,7 @@ actual class RandomAccessFileImpl {
             mutex.unlock()
         }
         try {
-            job.cancel() // 取消所有正在执行的协程
+            writerJob.cancel() // 取消所有正在执行的协程
         }catch (e:Exception){
         }
     }
