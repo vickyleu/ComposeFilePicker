@@ -19,6 +19,7 @@ import kotlinx.cinterop.free
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.refTo
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
@@ -615,9 +616,10 @@ class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
 
 
     override fun write(b: ByteArray, off: Int, len: Int) {
-        if (originStream.streamStatus == NSStreamStatusNotOpen) return
-        if (outputStream.hasSpaceAvailable.not()) return
         memScoped {
+            if (originStream.streamStatus == NSStreamStatusNotOpen) return
+            if (outputStream.hasSpaceAvailable.not()) return
+
             if (len - off <= 0) {
                 return
             }
@@ -633,9 +635,12 @@ class FileOutputStream(file: FileImpl) : OutputStreamImpl() {
                     // 获取指向 UByteArray 的指针
                     val ubuffer = pinnedArray.addressOf(0).reinterpret<UByteVar>()
                     val bytesWrite: NSInteger = outputStream.write(ubuffer, (len - off).toULong())
+                    nativeHeap.free(b.refTo(0).getPointer(this))
                 }
+                nativeHeap.free(ubyteBuffer.refTo(0).getPointer(this))
             } catch (e: Exception) {
                 e.printStackTrace()
+                nativeHeap.free(b.refTo(0).getPointer(this))
             }
         }
     }
@@ -840,6 +845,7 @@ actual class ByteArrayOutputStreamImpl actual constructor() : OutputStreamImpl()
                 val ptr = pinnedArray.addressOf(off)
                 nsDate.appendBytes(ptr, len.toULong())
             }
+            nativeHeap.free(b.refTo(0).getPointer(this))
 //            val pointer = b.refTo(0).getPointer(this) + off
         }
     }
@@ -905,28 +911,45 @@ actual class RandomAccessFileImpl {
     private val mutex = kotlinx.coroutines.sync.Mutex()
 
     actual fun writeAtOffset(data: ByteArray, offset: Long, length: Int) {
-        if (::fileWritingHandle.isInitialized.not()) return
-        if (isClosed) return
-        if (data.size < length) {
-            return
-        }
-        scope.launch {
-            withContext(Dispatchers.IO) {
-                mutex.withLock {
-                    //NSFileHandle
-                    fileWritingHandle.seekToOffset(offset.toULong(), null)
-                    memScoped {
-                        data.usePinned {
-                            val ptr = it.addressOf(0)
-                            val ulong = nativeHeap.alloc<uLongVar>()
-                            fileWritingHandle.getOffset(ulong.ptr, null)
-                            val pos = ulong.value.toInt()
-                            nativeHeap.free(ulong.ptr)
-                            fileWritingHandle.writeData(NSData.create(ptr, length.toULong()), null)
-//                fileWritingHandle.synchronizeFile() // 不能调用,unknown error
+        memScoped {
+            if (::fileWritingHandle.isInitialized.not()) return kotlin.run {
+                nativeHeap.free(data.refTo(0).getPointer(this))
+            }
+            if (isClosed) return
+            if (data.size < length) {
+                nativeHeap.free(data.refTo(0).getPointer(this))
+                return
+            }
+            //NSFileHandle
+            data.usePinned {
+                val ptr = it.addressOf(0)
+                val ulong = nativeHeap.alloc<uLongVar>()
+                fileWritingHandle.getOffset(ulong.ptr, null)
+                val pos = ulong.value.toInt()
+                nativeHeap.free(ulong.ptr)
+                val nsData = NSData.create(ptr, length.toULong())
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        if(isClosed)return@withContext kotlin.run {
+                            nativeHeap.free(ptr)
+                        }
+                        mutex.withLock {
+                            if(isClosed)return@withContext kotlin.run {
+                                nativeHeap.free(ptr)
+                                nsData.bytes?.getPointer(this@memScoped)?.let {
+                                    nativeHeap.free(it)
+                                }
+                            }
+                            fileWritingHandle.seekToOffset(offset.toULong(), null)
+                            fileWritingHandle.writeData(nsData, null)
+                            nativeHeap.free(ptr)
+                            nsData.bytes?.getPointer(this@memScoped)?.let {
+                                nativeHeap.free(it)
+                            }
                         }
                     }
                 }
+//                fileWritingHandle.synchronizeFile() // 不能调用,unknown error
             }
         }
     }
@@ -945,6 +968,9 @@ actual class RandomAccessFileImpl {
                 buffer.usePinned {
                     val ptr = it.addressOf(0)
                     data.getBytes(ptr, NSMakeRange(0u, data.length))
+                    data.bytes?.getPointer(this)?.let {
+                        nativeHeap.free(it)
+                    }
                     return buffer
                 }
             }
@@ -971,6 +997,9 @@ actual class RandomAccessFileImpl {
             fileWritingHandle.closeFile()
         }
         isClosed = true
+        if(mutex.isLocked){
+            mutex.unlock()
+        }
     }
 
 

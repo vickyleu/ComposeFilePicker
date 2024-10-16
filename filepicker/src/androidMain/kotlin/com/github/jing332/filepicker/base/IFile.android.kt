@@ -136,11 +136,15 @@ actual class RandomAccessFileImpl {
 
     actual fun writeAtOffset(data: ByteArray, offset: Long, length: Int) {
         if(isClosed) return
+        val dataCopy = data.copyOfRange(0, length)
         scope.launch {
+            if(isClosed) return@launch
             withContext(Dispatchers.IO){
+                if(isClosed) return@withContext
                 mutex.withLock {
+                    if(isClosed) return@withContext
                     randomAccessFile.seek(offset)
-                    randomAccessFile.write(data, 0, length)
+                    randomAccessFile.write(dataCopy, 0, length)
                 }
             }
         }
@@ -162,6 +166,9 @@ actual class RandomAccessFileImpl {
         if (isClosed) return
         randomAccessFile.close()
         isClosed = true
+        if(mutex.isLocked){
+            mutex.unlock()
+        }
     }
 
     actual fun toFile(): FileImpl {
