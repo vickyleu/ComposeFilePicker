@@ -6,6 +6,8 @@ import coil3.toCoilUri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -131,21 +133,27 @@ actual class RandomAccessFileImpl {
         this.file = file
         randomAccessFile = java.io.RandomAccessFile(file, mode)
     }
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val job = Job()
+    private val scope = CoroutineScope(Dispatchers.IO + job)
     private val mutex = kotlinx.coroutines.sync.Mutex()
+
 
     actual fun writeAtOffset(data: ByteArray, offset: Long, length: Int) {
         if(isClosed) return
         val dataCopy = data.copyOfRange(0, length)
         scope.launch {
-            if(isClosed) return@launch
-            withContext(Dispatchers.IO){
-                if(isClosed) return@withContext
-                mutex.withLock {
-                    if(isClosed) return@withContext
-                    randomAccessFile.seek(offset)
-                    randomAccessFile.write(dataCopy, 0, length)
+            try {
+                withContext(Dispatchers.IO) {
+                    ensureActive()
+                    if (isClosed) return@withContext
+                    mutex.withLock {
+                        ensureActive()
+                        if (isClosed) return@withContext
+                        randomAccessFile.seek(offset)
+                        randomAccessFile.write(dataCopy, 0, length)
+                    }
                 }
+            }catch (e:Exception){
             }
         }
     }
@@ -166,8 +174,12 @@ actual class RandomAccessFileImpl {
         if (isClosed) return
         randomAccessFile.close()
         isClosed = true
-        if(mutex.isLocked){
+        if (mutex.isLocked) {
             mutex.unlock()
+        }
+        try {
+            job.cancel() // 取消所有正在执行的协程
+        }catch (e:Exception){
         }
     }
 
