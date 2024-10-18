@@ -1023,8 +1023,11 @@ actual class RandomAccessFileImpl {
             fileWritingHandle.closeFile()
         }
         isClosed = true
-        if (mutex.isLocked) {
-            mutex.unlock()
+        try {
+            if (mutex.isLocked) {
+                mutex.unlock()
+            }
+        }catch (e:Exception){
         }
         // 结束写入协程
         writerJob.cancel()

@@ -208,8 +208,11 @@ actual class RandomAccessFileImpl {
         if (isClosed) return
         randomAccessFile.close()
         isClosed = true
-        if (mutex.isLocked) {
-            mutex.unlock()
+        try {
+            if (mutex.isLocked) {
+                mutex.unlock()
+            }
+        }catch (e:Exception){
         }
         try {
             writerJob.cancel() // 取消所有正在执行的协程
