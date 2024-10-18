@@ -135,8 +135,17 @@ actual class RandomAccessFileImpl {
         randomAccessFile = java.io.RandomAccessFile(file, mode)
     }
     private val writerJob = CoroutineScope(Dispatchers.IO).launch {
-        for (request in writeChannel) {
-            writeData(request.data, request.offset, request.length)
+        try {
+            if(writeChannel == null)return@launch
+            if(writeChannel.iterator()==null)return@launch
+            for (request in writeChannel) {
+                if(request == null)return@launch
+                try {
+                    writeData(request.data, request.offset, request.length)
+                }catch (e:Exception){
+                }
+            }
+        }catch (e:Exception){
         }
     }
     private val scope = CoroutineScope(Dispatchers.IO + writerJob)

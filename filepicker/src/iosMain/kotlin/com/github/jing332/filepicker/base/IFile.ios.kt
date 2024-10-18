@@ -25,8 +25,6 @@ import kotlinx.cinterop.value
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -72,7 +70,6 @@ import platform.Foundation.synchronizeFile
 import platform.Foundation.timeIntervalSince1970
 import platform.darwin.NSInteger
 import platform.darwin.NSUInteger
-import platform.zlib.uLongVar
 
 
 actual fun FileImpl.resolve(relative: String): FileImpl {
@@ -905,14 +902,25 @@ actual class RandomAccessFileImpl {
         }
     }
 
-//    private val job = Job()
+    //    private val job = Job()
     private val writerJob = CoroutineScope(Dispatchers.IO).launch {
-    for (request in writeChannel) {
-        writeData(request.data, request.offset, request.length)
+        try {
+            if (writeChannel == null) return@launch
+            if (writeChannel.iterator() == null) return@launch
+            for (request in writeChannel) {
+                if (request == null) return@launch
+                try {
+                    writeData(request.data, request.offset, request.length)
+                } catch (e: Exception) {
+                }
+            }
+        } catch (e: Exception) {
+        }
     }
-}
+
     private val scope = CoroutineScope(Dispatchers.IO + writerJob)
     private val mutex = kotlinx.coroutines.sync.Mutex()
+
     // 写入请求数据类
     private data class WriteRequest(val data: ByteArray, val offset: Long, val length: Int)
 
@@ -934,6 +942,7 @@ actual class RandomAccessFileImpl {
             }
         }
     }
+
     // 添加写入请求
     actual suspend fun writeAtOffsetAsync(data: ByteArray, offset: Long, length: Int) {
         writeChannel.send(WriteRequest(data.copyOf(length), offset, length))
@@ -966,7 +975,7 @@ actual class RandomAccessFileImpl {
                                 fileWritingHandle.writeData(nsData, null)
                             }
                         }
-                    }catch (e:Exception){
+                    } catch (e: Exception) {
                     }
                 }
 //                fileWritingHandle.synchronizeFile() // 不能调用,unknown error
