@@ -1,25 +1,36 @@
 [versions]
-agp = "8.7.0"
+agp = "8.7.3"
 android-minSdk = "24"
-android-compileSdk = "34"
+android-compileSdk = "35"
 android-targetSdk = "34"
 
-kotlin = "2.0.20"
-compose-plugin = "1.7.0-rc01"
-androidx-activityCompose = "1.9.2"
-jetpack-compose-bom = "2024.09.03"
+appcompat = "1.7.0"
+kotlin = "2.1.0"
+compose-plugin = "1.7.3"
+androidx-activityCompose = "1.9.3"
+jetpack-compose-bom = "2024.12.01"
 coroutines-bom = "1.9.0"
-coil-bom = "3.0.0-alpha10"
+coil-bom = "3.0.0"
 jvmTarget = "17"
 
 dokka = "1.9.20"
-kotlinxDatetime = "0.6.0"
-navigationCompose = "2.8.2"
+kotlinxDatetime = "0.6.1"
+navigationCompose = "2.8.5"
 
 accompanist = "0.34.0"
 ktor-bom = "3.0.0"
+navigationComposeVersion = "2.8.0-alpha02"
+sonner = "1.0.2"
+haze = "0.9.0-rc03"
+
+
 [libraries]
+
+haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+haze-materials = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "haze" }
+
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-navigation-compose  = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "jetpack-compose-bom" }
 coroutines-bom = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-bom", version.ref = "coroutines-bom" }
@@ -52,6 +63,8 @@ ktor-client-serialization = { group = "io.ktor", name = "ktor-client-serializati
 ktor-client-serialization-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json" }
 ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging" }
 ktor-client-android = { group = "io.ktor", name = "ktor-client-android" }
+navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationComposeVersion" }
+sonner = { module = "com.vickyleu.sonner:sonner", version.ref = "sonner" }
 
 
 [plugins]

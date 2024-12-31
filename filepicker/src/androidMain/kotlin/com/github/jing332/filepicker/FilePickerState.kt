@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
+import androidx.navigation.NavOptions
 import androidx.navigation.compose.rememberNavController
 import com.github.jing332.filepicker.listpage.FileListPageState
 import com.github.jing332.filepicker.utils.navigateImpl
@@ -53,7 +54,14 @@ class FilePickerState(
 
     fun navigate(path: String, state: FileListPageState = FileListPageState()) {
         fileListStates[path] = state
-        navController.navigateImpl(Contants.ROUTE_PAGE, mapOf(Contants.ARG_PATH to path), navigatorExtras = null, navOptions = null)
+        navController.navigateImpl(
+            route = Contants.ROUTE_PAGE,
+            args = mapOf(Contants.ARG_PATH to path),
+            navigatorExtras = null,
+            navOptions = NavOptions.Builder()
+                .setLaunchSingleTop(true)
+                .build()
+        )
     }
 
     // 回到首页

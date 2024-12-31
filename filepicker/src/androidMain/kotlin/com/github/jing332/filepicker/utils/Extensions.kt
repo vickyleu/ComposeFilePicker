@@ -31,18 +31,21 @@ fun NavHostController.navigateImpl(
     navigatorExtras: Navigator.Extras?
 ) {
     val bundle = args.toBundle()
+    // 拼接参数到 route
+    val appendedRoute = args.entries.joinToString("&", "$route?") { "${it.key}=${it.value}" }
     val routeLink = NavDeepLinkRequest
         .Builder
         .fromUri(NavDestination.createRoute(route).toUri())
         .build()
-
     val deepLinkMatch = graph.matchDeepLink(routeLink)
     if (deepLinkMatch != null) {
         val destination = deepLinkMatch.destination
         val id = destination.id
+        println("enterFile.path:  navigateIm222pl: $route, $bundle")
         navigate(id, bundle, navOptions, navigatorExtras)
     } else {
-        navigate(route, navOptions, navigatorExtras)
+        println("enterFile.path:  navigateIm333pl: $route, $bundle")
+        navigate(appendedRoute, navOptions, navigatorExtras)
     }
 }
 

@@ -71,6 +71,7 @@ import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.HttpHeaders
 import io.ktor.utils.io.InternalAPI
 import io.ktor.utils.io.cancel
+import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -591,7 +592,7 @@ suspend fun HttpClient.downloadFile(
                         while (remainingBytes > 0 && channel.isClosedForRead.not()) {
                             val buffer = ByteArray(8192)
                             bytesRead = channel.readAvailable(
-                                dst = buffer,
+                                buffer = buffer,
                                 offset = 0,
                                 length = minOf(remainingBytes.toInt(), buffer.size)
                             )

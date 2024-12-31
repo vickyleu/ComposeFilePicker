@@ -61,9 +61,11 @@ kotlin {
             implementation(projects.filePicker)
 
             // toast
-            implementation("com.vickyleu.sonner:sonner:1.0.2")
+            implementation(libs.sonner)
+            implementation(libs.haze)
+            implementation(libs.haze.materials)
 
-            implementation("org.jetbrains.androidx.navigation:navigation-compose:2.8.0-alpha02")
+            implementation(libs.navigation.compose)
 
 
             implementation(libs.ktor.http)
@@ -86,7 +88,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.android)
-            implementation("androidx.appcompat:appcompat:1.7.0")
+            implementation(libs.androidx.appcompat)
         }
     }
 }

@@ -86,7 +86,7 @@ fun FilePicker(
         val deniedStr = stringResource(Res.string.error_permission_denied)
         FilePickerToolbar(
             modifier = Modifier.fillMaxWidth(),
-            title = navBarItems.lastOrNull()?.name ?: "",
+            title = navBarItems.toList().lastOrNull()?.name ?: "",
             sortConfig = config.sortConfig,
             onSortConfigChange = {
                 config.sortConfig = it
@@ -114,7 +114,11 @@ fun FilePicker(
             composable(Contants.ROUTE_PAGE) { entry ->
                 navControllerSetup(navController)
 
+                println("enterFile.path: entry.arguments: ${entry.arguments}  ${entry.destination.arguments}" +
+                        "entry.destination: ${entry.destination.route} ${entry.id}")
                 val path = entry.arguments?.getString(Contants.ARG_PATH) ?: rootPath
+
+                println("enterFile.path: $path")
                 val fileListState = state.getListState(path).apply {
                     sortConfig = config.sortConfig
                     viewType = config.viewType
@@ -143,6 +147,7 @@ fun FilePicker(
                         popBack()
                     },
                     onEnter = { enterFile ->
+                        println("enterFile.path222: ${enterFile.path}")
                         state.navigate(enterFile.path)
                         navBarItems += NavBarItem(
                             name = enterFile.name,
