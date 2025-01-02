@@ -55,12 +55,10 @@ class FilePickerState(
     fun navigate(path: String, state: FileListPageState = FileListPageState()) {
         fileListStates[path] = state
         navController.navigateImpl(
-            route = Contants.ROUTE_PAGE,
+            route = Contants.ROUTE_PAGE_JUMP,
             args = mapOf(Contants.ARG_PATH to path),
             navigatorExtras = null,
-            navOptions = NavOptions.Builder()
-                .setLaunchSingleTop(true)
-                .build()
+            navOptions = null
         )
     }
 

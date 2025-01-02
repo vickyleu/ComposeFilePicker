@@ -10,6 +10,8 @@ import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 //@Suppress("RestrictedApi")
 //fun NavController.navigateImpl(
@@ -32,7 +34,14 @@ fun NavHostController.navigateImpl(
 ) {
     val bundle = args.toBundle()
     // 拼接参数到 route
-    val appendedRoute = args.entries.joinToString("&", "$route?") { "${it.key}=${it.value}" }
+    val appendedRoute = args.entries.joinToString("&", "$route?") {
+        "${it.key}=${
+            URLEncoder.encode(
+                "${it.value}",
+                StandardCharsets.UTF_8.toString()
+            )
+        }"
+    }
     val routeLink = NavDeepLinkRequest
         .Builder
         .fromUri(NavDestination.createRoute(route).toUri())
@@ -41,10 +50,8 @@ fun NavHostController.navigateImpl(
     if (deepLinkMatch != null) {
         val destination = deepLinkMatch.destination
         val id = destination.id
-        println("enterFile.path:  navigateIm222pl: $route, $bundle")
         navigate(id, bundle, navOptions, navigatorExtras)
     } else {
-        println("enterFile.path:  navigateIm333pl: $route, $bundle")
         navigate(appendedRoute, navOptions, navigatorExtras)
     }
 }

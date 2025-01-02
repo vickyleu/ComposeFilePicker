@@ -13,10 +13,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.navArgument
 import coil3.compose.LocalPlatformContext
 import com.github.jing332.filepicker.Contants.ARG_PATH
 import com.github.jing332.filepicker.Contants.ROUTE_PAGE
@@ -111,19 +114,18 @@ fun FilePicker(
             navController = navController,
             startDestination = ROUTE_PAGE
         ) {
-            composable(Contants.ROUTE_PAGE) { entry ->
+
+            composable(Contants.ROUTE_PAGE, arguments = listOf(navArgument("uri") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = Contants.DEFAULT_ROOT_PATH // 默认值
+            })) { entry ->
                 navControllerSetup(navController)
-
-                println("enterFile.path: entry.arguments: ${entry.arguments}  ${entry.destination.arguments}" +
-                        "entry.destination: ${entry.destination.route} ${entry.id}")
                 val path = entry.arguments?.getString(Contants.ARG_PATH) ?: rootPath
-
-                println("enterFile.path: $path")
                 val fileListState = state.getListState(path).apply {
                     sortConfig = config.sortConfig
                     viewType = config.viewType
                 }
-
                 LaunchedEffect(key1 = Unit) {
                     flagCloseSearch.value = true
                     state.currentPath = path
@@ -147,7 +149,6 @@ fun FilePicker(
                         popBack()
                     },
                     onEnter = { enterFile ->
-                        println("enterFile.path222: ${enterFile.path}")
                         state.navigate(enterFile.path)
                         navBarItems += NavBarItem(
                             name = enterFile.name,
