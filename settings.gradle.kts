@@ -106,7 +106,7 @@ pluginManagement {
 }
 
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.7.0"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
 
@@ -164,7 +164,7 @@ dependencyResolutionManagement {
         }
 
         maven {
-            url = uri("https://maven.pkg.github.com/vickyleu/compose_image_picker")
+            url = uri("https://maven.pkg.github.com/vickyleu/compose_file_picker")
             val properties = java.util.Properties().apply {
                 runCatching { rootProject.projectDir.resolve("local.properties") }
                     .getOrNull()
