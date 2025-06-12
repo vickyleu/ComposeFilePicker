@@ -54,7 +54,7 @@ kotlin {
             implementation(compose.material)
             implementation(compose.material3)
             implementation(compose.components.resources)
-
+            implementation("org.jetbrains.compose.material:material-icons-core:1.7.3")
             implementation(project.dependencies.platform(libs.compose.bom))
             implementation(project.dependencies.platform(libs.coroutines.bom))
             implementation(project.dependencies.platform(libs.coil.bom))
@@ -62,7 +62,7 @@ kotlin {
             implementation(libs.coil.core)
             api(libs.coil.compose)
 
-            implementation("com.squareup.okio:okio:3.9.0")
+            implementation("com.squareup.okio:okio:3.10.2")
         }
 
         androidMain.dependencies {

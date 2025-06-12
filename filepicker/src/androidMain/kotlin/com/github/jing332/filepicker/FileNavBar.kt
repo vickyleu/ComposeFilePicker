@@ -1,6 +1,7 @@
 package com.github.jing332.filepicker
 
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Row
@@ -62,7 +63,7 @@ fun FileNavBar(
     LazyRow(modifier, state = state) {
         itemsIndexed(list, key = { _, item -> item.path }) { index, item ->
             Row(
-                modifier = Modifier.animateItemPlacement(),
+                modifier = Modifier.animateItem(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
