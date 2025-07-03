@@ -10,3 +10,5 @@
 .cxx
 local.properties
 iosApp/iosApp.xcodeproj/*.xcworkspace
+iosApp/build
+/iosApp/iosApp.xcodeproj/xcuserdata/**/*.plist
